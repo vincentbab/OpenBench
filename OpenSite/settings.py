@@ -27,6 +27,8 @@ ALLOWED_HOSTS = ['*']
 HTML_MINIFY   = True
 APPEND_SLASH  = True
 
+ENABLE_DJANGO_ADMIN = False
+
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Application definition
