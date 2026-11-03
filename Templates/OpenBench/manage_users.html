@@ -1,0 +1,69 @@
+{% extends "OpenBench/manage.html" %}
+
+{% load mytags %}
+
+{% block manage %}
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Users <span class="count">{{ profiles|length }}</span></h2>
+            <input class="input" id="user-filter" placeholder="Filter by name or email" style="width: 260px; height: 30px;">
+        </div>
+        <div class="table-wrap">
+            <table class="table" id="users-table" data-sortable>
+                <thead>
+                    <tr>
+                        <th data-sort="text">User</th>
+                        <th data-sort="text">Email</th>
+                        <th data-sort="text">Status</th>
+                        <th data-sort="text">Roles</th>
+                        <th class="num" data-sort="num">Games</th>
+                        <th class="num" data-sort="num">Tests</th>
+                        <th class="num" data-sort="num">Machines</th>
+                        <th data-sort="num">Joined</th>
+                        <th data-sort="num">Last login</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in profiles %}
+                        <tr data-search="{{ profile.user.username|lower }} {{ profile.user.email|lower }}">
+                            <td class="nowrap">
+                                <a href="/manage/users/{{ profile.user.username }}/" style="display: inline-flex; align-items: center; gap: 8px; vertical-align: middle;">
+                                    <span class="avatar">{{ profile.user.username|slice:':1' }}</span><b>{{ profile.user.username }}</b>
+                                </a>
+                                {% if profile.user_id == user.id %}<span class="badge warn"><i class="fa-solid fa-star"></i> You</span>{% endif %}
+                            </td>
+                            <td class="muted">{{ profile.user.email|default:"—" }}</td>
+                            <td data-sort="{{ profile.enabled|yesno:'1,0' }}">{% if profile.enabled %}<span class="badge pass">Enabled</span>{% else %}<span class="badge fail">Disabled</span>{% endif %}</td>
+                            <td data-sort="{% if profile.user.is_superuser %}3{% elif profile.superuser %}2{% elif profile.approver %}1{% else %}0{% endif %}">
+                                {% if profile.user.is_superuser %}<span class="badge run">Superuser</span>{% elif profile.superuser %}<span class="badge run">Manager</span>{% endif %}
+                                {% if profile.approver %}<span class="badge info">Approver</span>{% endif %}
+                            </td>
+                            <td class="num">{{ profile.games|insertCommas }}</td>
+                            <td class="num">{{ profile.tests|insertCommas }}</td>
+                            <td class="num">{{ profile.machines }}</td>
+                            <td class="muted nowrap" data-sort="{{ profile.user.date_joined|date:'U' }}"><span class="datestamp">{{ profile.user.date_joined|date:'U' }}</span></td>
+                            <td class="muted nowrap" data-sort="{{ profile.user.last_login|date:'U'|default:'0' }}">{% if profile.user.last_login %}<span class="reltime">{{ profile.user.last_login|date:'U' }}</span>{% else %}Never{% endif %}</td>
+                            <td class="actions">
+                                <a class="btn btn-ghost btn-icon btn-sm" href="/manage/users/{{ profile.user.username }}/" title="Edit"><i class="fa-solid fa-pen"></i></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.getElementById('user-filter').addEventListener('input', event => {
+            const query = event.target.value.toLowerCase();
+            document.querySelectorAll('#users-table tbody tr').forEach(row => {
+                row.classList.toggle('hidden', !row.dataset.search.includes(query));
+            });
+        });
+    </script>
+{% endblock %}

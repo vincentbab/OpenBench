@@ -43,7 +43,7 @@ from django.contrib.auth.models import User
 from OpenSite.settings import MEDIA_ROOT
 
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import Count, F, Q
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
@@ -73,6 +73,7 @@ def render(request, template, content={}, always_allow=False, error=None, warnin
     # Every page lists the Engines in the sidebar. Lazy, so pages that do not
     # reference it in their Template never execute the query.
     data.setdefault('engines', EngineConfig.objects.filter(enabled=True).order_by('name'))
+    data.setdefault('is_manager', has_manage_permissions(request))
 
     if OPENBENCH_CONFIG['require_login_to_view']:
         if not request.user.is_authenticated and not always_allow:
@@ -715,6 +716,112 @@ def manage_engines(request, name=None, action=None):
         return redirect(request, '/manage/engines/', error='Unknown action for an Engine')
 
     return actions[action.upper()](request, config)
+
+def manage_users(request, name=None, action=None):
+
+    if not has_manage_permissions(request):
+        return redirect(request, '/manage/engines/', error='Only managers may manage Users')
+
+    if not name:
+        profiles = Profile.objects.select_related('user').annotate(machines=Count('user__owner')).order_by('user__username')
+        data = { 'profiles' : profiles, 'can_manage' : True }
+        return render(request, 'manage_users.html', data)
+
+    if name == 'new':
+        if request.method != 'POST':
+            form = { 'enabled' : True }
+            return render(request, 'manage_user.html', { 'form' : form, 'creating' : True, 'can_manage' : True })
+        return manage_user_create(request)
+
+    if not (profile := Profile.objects.select_related('user').filter(user__username=name).first()):
+        return redirect(request, '/manage/users/', error='No such User exists')
+
+    is_self = profile.user_id == request.user.id
+
+    if not action:
+        data = {
+            'member'     : profile,
+            'is_self'    : is_self,
+            'machines'   : Machine.objects.filter(user=profile.user).count(),
+            'can_manage' : True,
+        }
+        return render(request, 'manage_user.html', data)
+
+    if request.method != 'POST':
+        return redirect(request, '/manage/users/%s/' % (name))
+
+    if action.upper() == 'EDIT':
+        return manage_user_edit(request, profile, is_self)
+
+    if action.upper() == 'DELETE':
+        if is_self:
+            return redirect(request, '/manage/users/%s/' % (name), error='You cannot delete your own account')
+        if Machine.objects.filter(user=profile.user).exists():
+            return redirect(request, '/manage/users/%s/' % (name), error='Cannot delete a User who still owns Machines. Disable it instead')
+        user = profile.user
+        profile.delete()
+        user.delete()
+        return redirect(request, '/manage/users/', status='Deleted User %s' % (name))
+
+    return redirect(request, '/manage/users/', error='Unknown action for a User')
+
+def manage_user_create(request):
+
+    username = request.POST.get('username', '').strip()
+    form = {
+        'username' : username,
+        'email'    : request.POST.get('email', '').strip(),
+        'enabled'  : request.POST.get('enabled') == 'TRUE',
+        'approver' : request.POST.get('approver') == 'TRUE',
+        'manager'  : request.POST.get('manager') == 'TRUE',
+    }
+
+    error = None
+    if not username.isalnum():
+        error = 'Usernames may only contain letters and digits'
+    elif User.objects.filter(username=username).exists():
+        error = 'That username is already taken'
+    elif not request.POST.get('password1'):
+        error = 'A password is required'
+    elif request.POST.get('password1') != request.POST.get('password2'):
+        error = 'Passwords do not match'
+
+    if error:
+        return render(request, 'manage_user.html', { 'form' : form, 'creating' : True, 'can_manage' : True }, error=error)
+
+    user = User.objects.create_user(username, form['email'], request.POST['password1'])
+    Profile.objects.create(user=user, enabled=form['enabled'], approver=form['approver'], superuser=form['manager'])
+
+    return redirect(request, '/manage/users/', status='Created User %s' % (username))
+
+def manage_user_edit(request, profile, is_self):
+
+    user = profile.user
+    url  = '/manage/users/%s/' % (user.username)
+
+    if request.POST.get('password1') != request.POST.get('password2'):
+        return redirect(request, url, error='Passwords do not match')
+
+    user.email = request.POST.get('email', '').strip()
+
+    if request.POST.get('password1'):
+        user.set_password(request.POST['password1'])
+
+    user.save()
+
+    if request.POST.get('password1') and is_self:
+        django.contrib.auth.update_session_auth_hash(request, user)
+
+    profile.approver = request.POST.get('approver') == 'TRUE'
+    profile.engine   = request.POST.get('engine', profile.engine)
+
+    if not is_self:
+        profile.enabled   = request.POST.get('enabled') == 'TRUE'
+        profile.superuser = request.POST.get('manager') == 'TRUE'
+
+    profile.save()
+
+    return redirect(request, '/manage/users/', status='Updated User %s' % (user.username))
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                             OPENBENCH SCRIPTING                             #

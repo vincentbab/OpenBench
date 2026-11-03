@@ -66,6 +66,10 @@ urlpatterns = [
     path(r'manage/engines/<str:name>/', views.manage_engines),
     path(r'manage/engines/<str:name>/<str:action>/', views.manage_engines),
 
+    path(r'manage/users/', views.manage_users),
+    path(r'manage/users/<str:name>/', views.manage_users),
+    path(r'manage/users/<str:name>/<str:action>/', views.manage_users),
+
     # Links for interacting with OpenBench via scripting
     path(r'scripts/', views.scripts),
 

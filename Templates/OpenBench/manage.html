@@ -14,6 +14,8 @@
                 <a class="btn btn-primary" href="/manage/engines/new/"><i class="fa-solid fa-plus"></i> New engine</a>
             {% elif request.path == '/manage/books/' %}
                 <a class="btn btn-primary" href="/manage/books/new/"><i class="fa-solid fa-plus"></i> New book</a>
+            {% elif request.path == '/manage/users/' %}
+                <a class="btn btn-primary" href="/manage/users/new/"><i class="fa-solid fa-user-plus"></i> New user</a>
             {% endif %}
         {% endif %}
     </div>
@@ -21,6 +23,9 @@
     <nav class="tabs">
         <a href="/manage/engines/" class="{% if '/manage/engines' in request.path %}active{% endif %}"><i class="fa-solid fa-chess-knight"></i> Engines</a>
         <a href="/manage/books/" class="{% if '/manage/books' in request.path %}active{% endif %}"><i class="fa-solid fa-book"></i> Books</a>
+        {% if is_manager %}
+            <a href="/manage/users/" class="{% if '/manage/users' in request.path %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Users</a>
+        {% endif %}
     </nav>
 
     {% block manage %}{% endblock %}

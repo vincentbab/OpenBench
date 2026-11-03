@@ -30,6 +30,9 @@
         <div class="side-title">Manage</div>
         <a class="side-link {% if p|slice:':16' == '/manage/engines/' %}active{% endif %}" href="/manage/engines/"><i class="fa-solid fa-chess-knight"></i> Engines</a>
         <a class="side-link {% if p|slice:':14' == '/manage/books/' %}active{% endif %}" href="/manage/books/"><i class="fa-solid fa-book"></i> Books</a>
+        {% if is_manager %}
+            <a class="side-link {% if p|slice:':14' == '/manage/users/' %}active{% endif %}" href="/manage/users/"><i class="fa-solid fa-users-gear"></i> Users</a>
+        {% endif %}
     </div>
 
     {% if engines %}

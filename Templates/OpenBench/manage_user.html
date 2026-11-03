@@ -1,0 +1,128 @@
+{% extends "OpenBench/manage.html" %}
+
+{% load mytags %}
+
+{% block manage %}
+
+    <div class="grid-sidebar">
+
+        <form method="POST" action="{% if creating %}/manage/users/new/{% else %}/manage/users/{{ member.user.username }}/edit/{% endif %}" class="card">
+            {% csrf_token %}
+            <div class="card-header">
+                <h2>
+                    {% if creating %}
+                        <i class="fa-solid fa-user-plus"></i> New user
+                    {% else %}
+                        <span class="avatar">{{ member.user.username|slice:':1' }}</span> {{ member.user.username }}
+                        {% if is_self %}<span class="badge warn"><i class="fa-solid fa-star"></i> You</span>{% endif %}
+                    {% endif %}
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div class="form-section">
+                    <div class="form-section-title">Account</div>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="username">Username</label>
+                            {% if creating %}
+                                <input id="username" name="username" value="{{ form.username|default:'' }}" pattern="[A-Za-z0-9]+" title="Letters and digits only" required autofocus autocomplete="off">
+                            {% else %}
+                                <input id="username" value="{{ member.user.username }}" readonly>
+                            {% endif %}
+                        </div>
+                        <div class="field">
+                            <label for="email">Email</label>
+                            <input id="email" name="email" type="email" value="{% if creating %}{{ form.email|default:'' }}{% else %}{{ member.user.email }}{% endif %}" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <label for="password1">{% if creating %}Password{% else %}New password{% endif %}</label>
+                            <input id="password1" name="password1" type="password" autocomplete="new-password" {% if creating %}required{% else %}placeholder="Leave empty to keep"{% endif %}>
+                        </div>
+                        <div class="field">
+                            <label for="password2">Confirm password</label>
+                            <input id="password2" name="password2" type="password" autocomplete="new-password" {% if creating %}required{% endif %}>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Permissions</div>
+                    <div class="form-grid cols-3">
+                        <div class="field">
+                            <label for="enabled">Status</label>
+                            <select id="enabled" name="enabled" {% if is_self %}disabled{% endif %}>
+                                <option value="TRUE" {% if creating and form.enabled or member.enabled %}selected{% endif %}>Enabled</option>
+                                <option value="FALSE" {% if creating and not form.enabled or not creating and not member.enabled %}selected{% endif %}>Disabled</option>
+                            </select>
+                            <span class="hint">Can create tests and run workers</span>
+                        </div>
+                        <div class="field">
+                            <label for="approver">Approver</label>
+                            <select id="approver" name="approver">
+                                <option value="FALSE" {% if creating and not form.approver or not creating and not member.approver %}selected{% endif %}>No</option>
+                                <option value="TRUE" {% if creating and form.approver or member.approver %}selected{% endif %}>Yes</option>
+                            </select>
+                            <span class="hint">Can approve, stop and edit any test</span>
+                        </div>
+                        <div class="field">
+                            <label for="manager">Manager</label>
+                            <select id="manager" name="manager" {% if is_self %}disabled{% endif %}>
+                                <option value="FALSE" {% if creating and not form.manager or not creating and not member.superuser %}selected{% endif %}>No</option>
+                                <option value="TRUE" {% if creating and form.manager or member.superuser %}selected{% endif %}>Yes</option>
+                            </select>
+                            <span class="hint">Can manage engines, books and users</span>
+                        </div>
+                    </div>
+                    {% if is_self %}
+                        <p class="hint muted" style="margin: 12px 0 0;"><i class="fa-solid fa-lock"></i> You cannot disable yourself or remove your own manager rights.</p>
+                    {% endif %}
+                    {% if not creating and member.user.is_superuser %}
+                        <p class="hint muted" style="margin: 12px 0 0;"><i class="fa-solid fa-shield-halved"></i> This account is a Django superuser: it keeps manager rights regardless of the setting above.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+                <a class="btn btn-ghost" href="/manage/users/">Cancel</a>
+                <button class="btn btn-primary" type="submit">
+                    {% if creating %}<i class="fa-solid fa-user-plus"></i> Create user{% else %}<i class="fa-solid fa-floppy-disk"></i> Save user{% endif %}
+                </button>
+            </div>
+        </form>
+
+        {% if not creating %}
+            <div class="stack">
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-chart-simple"></i> Activity</h2></div>
+                    <dl class="kv">
+                        <dt>Games</dt><dd>{{ member.games|insertCommas }}</dd>
+                        <dt>Tests</dt><dd><a href="/user/{{ member.user.username }}/">{{ member.tests|insertCommas }}</a></dd>
+                        <dt>Machines</dt><dd>{{ machines }}</dd>
+                        <dt>Default engine</dt><dd>{{ member.engine|default:"—" }}</dd>
+                        <dt>Joined</dt><dd><span class="timestamp">{{ member.user.date_joined|date:'U' }}</span></dd>
+                        <dt>Last login</dt><dd>{% if member.user.last_login %}<span class="timestamp">{{ member.user.last_login|date:'U' }}</span>{% else %}Never{% endif %}</dd>
+                    </dl>
+                </section>
+
+                {% if not is_self %}
+                    <section class="card">
+                        <div class="card-header"><h2><i class="fa-solid fa-triangle-exclamation"></i> Danger zone</h2></div>
+                        <div class="card-body">
+                            {% if machines %}
+                                <p class="muted" style="margin: 0;">This user owns {{ machines }} machine{{ machines|pluralize }} and cannot be deleted. Disable the account instead.</p>
+                            {% else %}
+                                <form method="POST" action="/manage/users/{{ member.user.username }}/delete/" data-confirm="Delete {{ member.user.username }} forever?">
+                                    {% csrf_token %}
+                                    <button class="btn btn-danger btn-block" type="submit"><i class="fa-solid fa-trash-can"></i> Delete user</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    </div>
+
+{% endblock %}
