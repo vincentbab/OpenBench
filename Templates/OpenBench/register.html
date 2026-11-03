@@ -1,26 +1,48 @@
 {% extends "OpenBench/base.html" %}
+{% load static %}
 
-{% block content %}
+{% block title %}Register · OpenBench{% endblock %}
 
-    <form id="registerForm" method="POST" action="/register/">
-        {% csrf_token %}
-        <div class="form">
-            <div class="col">
-                <div class="row">
-                    <label>Username</label><input name="username">
+{% block body %}
+    <div class="auth">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                <div>
+                    <h1>Create an account</h1>
+                    <p>An administrator must enable it before you can run tests</p>
                 </div>
-                <div class="row">
-                    <label>Password</label><input type="password" name="password1">
-                </div>
-                <div class="row">
-                    <label>Password</label><input type="password" name="password2">
-                </div>
-                <div class="row">
-                    <label>Email</label><input name="email">
-                </div>
-                <input class="anchorbutton btn-blue w-100" type="submit" name="submit" value="Create User">
             </div>
-        </div>
-    </form>
 
+            {% include "OpenBench/Blocks/alerts.html" %}
+
+            <div class="card">
+                <div class="card-body">
+                    <form id="registerForm" method="POST" action="/register/" class="form-grid cols-1">
+                        {% csrf_token %}
+                        <div class="field">
+                            <label for="username">Username</label>
+                            <input id="username" name="username" autocomplete="username" pattern="[A-Za-z0-9]+" title="Letters and digits only" autofocus required>
+                            <span class="hint">Letters and digits only</span>
+                        </div>
+                        <div class="field">
+                            <label for="email">Email</label>
+                            <input id="email" name="email" type="email" autocomplete="email" required>
+                        </div>
+                        <div class="field">
+                            <label for="password1">Password</label>
+                            <input id="password1" name="password1" type="password" autocomplete="new-password" required>
+                        </div>
+                        <div class="field">
+                            <label for="password2">Confirm password</label>
+                            <input id="password2" name="password2" type="password" autocomplete="new-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg btn-block">Create account</button>
+                    </form>
+                </div>
+            </div>
+
+            <p class="auth-foot">Already registered? <a href="/login/">Log in</a></p>
+        </div>
+    </div>
 {% endblock %}

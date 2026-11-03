@@ -1,0 +1,46 @@
+{% with p=request.path %}
+<aside class="sidebar" id="sidebar">
+
+    <div class="side-section">
+        <div class="side-title">Tests</div>
+        <a class="side-link {% if p == '/' or p|slice:':7' == '/index/' or p|slice:':6' == '/test/' and not '/new/' in p or p|slice:':6' == '/tune/' and not '/new/' in p or p|slice:':9' == '/datagen/' and not '/new/' in p %}active{% endif %}" href="/index/"><i class="fa-solid fa-house"></i> Index</a>
+        <a class="side-link {% if p|slice:':8' == '/greens/' %}active{% endif %}" href="/greens/"><i class="fa-solid fa-circle-check"></i> Greens</a>
+        <a class="side-link {% if p|slice:':8' == '/search/' %}active{% endif %}" href="/search/"><i class="fa-solid fa-magnifying-glass"></i> Search</a>
+        <a class="side-link {% if p|slice:':6' == '/user/' %}active{% endif %}" href="/user/{{ user.username }}/"><i class="fa-solid fa-list-check"></i> My tests</a>
+    </div>
+
+    <div class="side-section">
+        <div class="side-title">Create</div>
+        <a class="side-link {% if p == '/test/new/' %}active{% endif %}" href="/test/new/"><i class="fa-solid fa-plus"></i> Test</a>
+        <a class="side-link {% if p == '/tune/new/' %}active{% endif %}" href="/tune/new/"><i class="fa-solid fa-sliders"></i> Tune</a>
+        <a class="side-link {% if p == '/datagen/new/' %}active{% endif %}" href="/datagen/new/"><i class="fa-solid fa-database"></i> Datagen</a>
+        <a class="side-link {% if p == '/newNetwork/' %}active{% endif %}" href="/newNetwork/"><i class="fa-solid fa-upload"></i> Upload net</a>
+    </div>
+
+    <div class="side-section">
+        <div class="side-title">Info</div>
+        <a class="side-link {% if p|slice:':7' == '/users/' %}active{% endif %}" href="/users/"><i class="fa-solid fa-users"></i> Users</a>
+        <a class="side-link {% if p|slice:':10' == '/machines/' %}active{% endif %}" href="/machines/"><i class="fa-solid fa-microchip"></i> Machines</a>
+        <a class="side-link {% if p|slice:':10' == '/networks/' %}active{% endif %}" href="/networks/"><i class="fa-solid fa-circle-nodes"></i> Networks</a>
+        <a class="side-link {% if p|slice:':8' == '/events/' %}active{% endif %}" href="/events/"><i class="fa-solid fa-clock-rotate-left"></i> Events</a>
+        <a class="side-link {% if p|slice:':8' == '/errors/' or p|slice:':7' == '/event/' %}active{% endif %}" href="/errors/"><i class="fa-solid fa-triangle-exclamation"></i> Errors</a>
+    </div>
+
+    <div class="side-section">
+        <div class="side-title">Manage</div>
+        <a class="side-link {% if p|slice:':16' == '/manage/engines/' %}active{% endif %}" href="/manage/engines/"><i class="fa-solid fa-chess-knight"></i> Engines</a>
+        <a class="side-link {% if p|slice:':14' == '/manage/books/' %}active{% endif %}" href="/manage/books/"><i class="fa-solid fa-book"></i> Books</a>
+    </div>
+
+    {% if engines %}
+        <div class="side-section">
+            <div class="side-title">Engines</div>
+            {% for engine in engines %}
+                <a class="side-link" href="{{ engine.source }}" title="{{ engine.source }}"><i class="fa-brands fa-github"></i> {{ engine.name }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</aside>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+{% endwith %}

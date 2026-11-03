@@ -100,6 +100,9 @@ def render(request, template, content={}, always_allow=False, error=None, warnin
 
     response = django.shortcuts.render(request, 'OpenBench/{0}'.format(template), data)
 
+    if request.headers.get('X-Live'):
+        return response
+
     for key in ['status_message', 'warning_message', 'error_message']:
         if key in request.session: del request.session[key]
 
@@ -274,11 +277,13 @@ def index(request, page=1):
     start, end, paging = OpenBench.utils.getPaging(completed, int(page), 'index')
 
     data = {
-        'pending'   : pending,
-        'active'    : OpenBench.utils.group_active_tests_by_priority(active),
-        'completed' : completed[start:end],
-        'paging'    : paging,
-        'status'    : OpenBench.utils.getMachineStatus(),
+        'heading'      : 'Tests',
+        'pending'      : pending,
+        'active'       : OpenBench.utils.group_active_tests_by_priority(active),
+        'active_count' : len(active),
+        'completed'    : completed[start:end],
+        'paging'       : paging,
+        'stats'        : OpenBench.utils.get_machine_stats(),
     }
 
     return render(request, 'index.html', data)
@@ -292,11 +297,13 @@ def user(request, username, page=1):
     start, end, paging = OpenBench.utils.getPaging(completed, int(page), 'user/%s' % (username))
 
     data = {
-        'pending'   : pending,
-        'active'    : OpenBench.utils.group_active_tests_by_priority(active),
-        'completed' : completed[start:end],
-        'paging'    : paging,
-        'status'    : OpenBench.utils.getMachineStatus(username),
+        'heading'      : 'Tests by %s' % (username.capitalize()),
+        'pending'      : pending,
+        'active'       : OpenBench.utils.group_active_tests_by_priority(active),
+        'active_count' : len(active),
+        'completed'    : completed[start:end],
+        'paging'       : paging,
+        'stats'        : OpenBench.utils.get_machine_stats(username),
     }
 
     return render(request, 'index.html', data)
@@ -306,7 +313,7 @@ def greens(request, page=1):
     completed = OpenBench.utils.get_completed_tests().filter(passed=True)
     start, end, paging = OpenBench.utils.getPaging(completed, int(page), 'greens')
 
-    data = { 'completed' : completed[start:end], 'paging' : paging }
+    data = { 'heading' : 'Greens', 'completed' : completed[start:end], 'paging' : paging }
     return render(request, 'index.html', data)
 
 def search(request):
@@ -443,9 +450,8 @@ def search(request):
         'show_deleted'  : 'show-deleted' in params,
     }
 
-    error = 'No matching tests found' if not len(filtered) else None
-    data  = { 'tests' : reversed(filtered), 'form' : form, 'books' : books }
-    return render(request, 'search.html', data, error=error)
+    data = { 'tests' : list(reversed(filtered)), 'count' : len(filtered), 'form' : form, 'books' : books }
+    return render(request, 'search.html', data)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                           GENERAL DATA TABLE VIEWS                          #
@@ -475,9 +481,16 @@ def events_actions(request, page=1):
 def events_errors(request, page=1):
 
     events = LogEvent.objects.all().exclude(machine_id=0).order_by('-id')
-    start, end, paging = OpenBench.utils.getPaging(events, int(page), 'errors')
+    workload = None
 
-    data = { 'events' : events[start:end], 'paging' : paging };
+    if (test_id := request.GET.get('test', '')).isdigit():
+        events = events.filter(test_id=int(test_id))
+        workload = Test.objects.filter(id=int(test_id)).select_related('dev', 'base').first()
+
+    start, end, paging = OpenBench.utils.getPaging(events, int(page), 'errors')
+    paging['query'] = '?test=%s' % (test_id) if workload else ''
+
+    data = { 'events' : events[start:end], 'paging' : paging, 'workload' : workload, 'count' : events.count() }
     return render(request, 'errors.html', data)
 
 def machines(request, pk=None):
@@ -586,22 +599,33 @@ def has_manage_permissions(request):
     return bool(profile and (profile.superuser or profile.user.is_superuser))
 
 def manage(request):
-    return redirect(request, '/manage/books/')
+    return redirect(request, '/manage/engines/')
 
 def manage_books(request, name=None, action=None):
 
     can_manage = has_manage_permissions(request)
 
-    # Without a name, all we can do is view the list of Books. The list also
-    # carries the creation form, which posts back to <new name>/create/
     if not name:
         data = { 'books' : Book.objects.order_by('name'), 'can_manage' : can_manage }
         return render(request, 'manage_books.html', data)
 
-    # Creating is the only action for a Book that does not exist yet
+    if name == 'new' and not action:
+        if not can_manage:
+            return redirect(request, '/manage/books/', error='You may not create Books')
+        book = { 'source' : 'https://raw.githubusercontent.com/', 'enabled' : True }
+        return render(request, 'manage_book.html', { 'book' : book, 'can_manage' : True, 'creating' : True })
+
     if action and action.upper() == 'CREATE':
         if not can_manage:
             return redirect(request, '/manage/books/', error='You may not create Books')
+        if (error := OpenBench.utils.book_create_error(request, name)):
+            book = {
+                'name'    : name,
+                'source'  : request.POST.get('source', ''),
+                'sha'     : request.POST.get('sha', ''),
+                'enabled' : request.POST.get('enabled') == 'TRUE',
+            }
+            return render(request, 'manage_book.html', { 'book' : book, 'can_manage' : True, 'creating' : True }, error=error)
         return OpenBench.utils.book_create(request, name)
 
     if not (book := Book.objects.filter(name=name).first()):
@@ -629,16 +653,41 @@ def manage_engines(request, name=None, action=None):
 
     can_manage = has_manage_permissions(request)
 
-    # Without a name, all we can do is view the list of Engines. The list also
-    # carries the creation form, which posts back to <new name>/create/
     if not name:
         data = { 'configs' : EngineConfig.objects.order_by('name'), 'can_manage' : can_manage }
         return render(request, 'manage_engines.html', data)
 
-    # Creating is the only action for an Engine that does not exist yet
+    blank_presets = { x : { 'default' : {} } for x in OpenBench.config.PRESET_TYPES }
+
+    if name == 'new' and not action:
+        if not can_manage:
+            return redirect(request, '/manage/engines/', error='You may not modify Engines')
+        data = {
+            'engine_config' : { 'source' : 'https://github.com/', 'enabled' : True, 'private' : False },
+            'can_manage'    : True,
+            'creating'      : True,
+            'presets'       : json.dumps(blank_presets, indent=4),
+        }
+        return render(request, 'manage_engine.html', data)
+
     if action and action.upper() == 'CREATE':
         if not can_manage:
             return redirect(request, '/manage/engines/', error='You may not modify Engines')
+        if (error := OpenBench.utils.engine_create_error(request, name)):
+            fields = [ 'source', 'nps', 'build_path', 'build_compilers', 'build_cpuflags', 'build_systems' ]
+            config = { field : request.POST.get(field, '') for field in fields }
+            config.update({
+                'name'    : name,
+                'private' : request.POST.get('private') == 'TRUE',
+                'enabled' : request.POST.get('enabled') == 'TRUE',
+            })
+            data = {
+                'engine_config' : config,
+                'can_manage'    : True,
+                'creating'      : True,
+                'presets'       : request.POST.get('presets', json.dumps(blank_presets, indent=4)),
+            }
+            return render(request, 'manage_engine.html', data, error=error)
         return OpenBench.utils.engine_create(request, name)
 
     if not (config := EngineConfig.objects.filter(name=name).first()):
@@ -1132,7 +1181,17 @@ def api_workload(request, workload_id, query):
     if query == 'summary':
         return api_response({ 'summary' : fetch_result_summaries(workload) })
 
-    valid_endpoints = [ 'results', 'info', 'summary' ]
+    if query == 'history':
+        points = TestHistory.objects.filter(test=workload).order_by('games')
+        return JsonResponse({
+            'mode'     : workload.test_mode,
+            'lowerllr' : workload.lowerllr,
+            'upperllr' : workload.upperllr,
+            'games'    : workload.games,
+            'history'  : list(points.values('games', 'llr', 'elo', 'elo_error')),
+        })
+
+    valid_endpoints = [ 'results', 'info', 'summary', 'history' ]
     return api_response({ 'error' : 'Valid /query/ endpoints are: [ %s ]' % (', '.join(valid_endpoints)) })
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

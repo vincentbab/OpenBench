@@ -2,31 +2,63 @@
 
 {% load mytags %}
 
+{% block title %}Errors · OpenBench{% endblock %}
+
 {% block content %}
 
-    <table class="hoverable">
+    <div class="page-header">
+        <div>
+            <h1>Errors{% if workload %} <span class="faint">· #{{ workload.id }}</span>{% endif %}</h1>
+            <div class="subtitle">
+                {% if workload %}
+                    {{ count|insertCommas }} error{{ count|pluralize }} reported for <a href="{{ workload|workload_url }}">{{ workload|workload_pretty_name }}</a>
+                {% else %}
+                    Crashes, illegal moves and build failures reported by workers
+                {% endif %}
+            </div>
+        </div>
+        {% if workload %}
+            <div class="page-actions">
+                <a class="btn" href="{{ workload|workload_url }}"><i class="fa-solid fa-arrow-left"></i> Back to test</a>
+                <a class="btn btn-ghost" href="/errors/"><i class="fa-solid fa-xmark"></i> Clear filter</a>
+            </div>
+        {% endif %}
+    </div>
 
-        <tr class="table-header">
-            <th>Date</th>
-            <th>#</th>
-            <th>User</th>
-            <th>Test</th>
-            <th>Summary</th>
-            <th>Logs</th>
-        </tr>
-
-        {% for event in events %}
-            <tr>
-                <td class="timestamp">{{event.created|date:'U'}}</td>
-                <td><a href="/machines/{{event.machine_id}}">{{event.machine_id}}</a></td>
-                <td>{{event.author|capfirst}}</td>
-                <td><a href="{{event.test_id|workload_url}}">{{event.test_id|testIdToPrettyName}}</a></td>
-                <td>{{event.summary}}</td>
-                <td>{% if event.log_file %}<a href='/event/{{event.id}}'>View</a>{% endif %}</td>
-            </tr>
-        {% endfor %}
-
-    <table>
+    <section class="card">
+        {% if events %}
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Machine</th>
+                            <th>User</th>
+                            <th>Workload</th>
+                            <th>Summary</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                            <tr>
+                                <td class="muted nowrap"><span class="timestamp">{{ event.created|date:'U' }}</span></td>
+                                <td><a href="/machines/{{ event.machine_id }}/">#{{ event.machine_id }}</a></td>
+                                <td>{{ event.author|capfirst }}</td>
+                                <td><a href="{{ event.test_id|workload_url }}">{{ event.test_id|testIdToPrettyName }}</a></td>
+                                <td>{{ event.summary }}</td>
+                                <td class="actions">
+                                    {% if event.log_file %}<a class="btn btn-sm" href="/event/{{ event.id }}/"><i class="fa-solid fa-file-lines"></i> Logs</a>{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty"><i class="fa-solid fa-circle-check"></i>No errors reported</div>
+        {% endif %}
+    </section>
 
     {% include "OpenBench/Blocks/pagebrowser.html" %}
 

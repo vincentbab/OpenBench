@@ -1,0 +1,6 @@
+{% load mytags %}{% if test.error or test|test_is_fischer or test|test_is_time_odds or test|test_is_smp_odds %}<span class="test-badges">
+    {% if test.error %}<span class="badge fail {{ badge_size }}" title="Crash or illegal move reported">{% if badge_size %}<i class="fa-solid fa-bug"></i> {% endif %}Errors</span>{% endif %}
+    {% if test|test_is_fischer %}<span class="badge pass {{ badge_size }}" title="Fischer random chess">{% if badge_size %}<i class="fa-solid fa-shuffle"></i> {% endif %}FRC</span>{% endif %}
+    {% if test|test_is_time_odds %}<span class="badge warn {{ badge_size }}" title="Dev {{ test.dev_time_control }} vs base {{ test.base_time_control }}">{% if badge_size %}<i class="fa-solid fa-stopwatch"></i> {% endif %}Time odds</span>{% endif %}
+    {% if test|test_is_smp_odds %}<span class="badge run {{ badge_size }}" title="Dev and base use different thread counts">{% if badge_size %}<i class="fa-solid fa-microchip"></i> {% endif %}Thread odds</span>{% endif %}
+</span>{% endif %}

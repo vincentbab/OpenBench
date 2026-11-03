@@ -1,0 +1,22 @@
+<colgroup>
+    {% if show_date %}<col class="c-date">{% endif %}
+    <col class="c-author">
+    <col class="c-engine">
+    <col class="c-name">
+    <col class="c-diff">
+    <col class="c-tc">
+    <col class="c-stats">
+    <col class="c-info">
+</colgroup>
+<thead>
+    <tr>
+        {% if show_date %}<th>Date</th>{% endif %}
+        <th>Author</th>
+        <th>Engine</th>
+        <th>Branch</th>
+        <th class="center">Diff</th>
+        <th>TC</th>
+        <th>Results</th>
+        <th>Info</th>
+    </tr>
+</thead>

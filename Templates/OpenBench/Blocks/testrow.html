@@ -1,0 +1,28 @@
+{% load mytags %}<tr class="test-row">
+    {% if show_date %}<td class="t-date"><span class="datestamp">{{ test.creation|date:"U" }}</span></td>{% endif %}
+    <td class="t-author"><a href="/user/{{ test.author }}/">{{ test.author|capfirst }}</a></td>
+    <td class="t-engine" title="{{ test.dev_engine }}">{{ test.dev_engine }}</td>
+    <td class="t-name">
+        <a href="{{ test|workload_url }}" title="{{ test.dev.name }}">{{ test|prettyDevName }}</a>
+        {% include "OpenBench/Blocks/testbadges.html" %}
+    </td>
+    <td class="t-diff center"><a href="{{ test|gitDiffLink }}" title="View diff on GitHub"><i class="fa-solid fa-code-compare"></i></a></td>
+    <td class="t-tc">{{ test.dev_time_control }}</td>
+    <td class="t-stats">
+        <div class="statblock is-{{ test|testResultColour|default:'none' }}{% if not test.finished %} is-running{% endif %}">
+            {{ test|listStatBlock|linebreaksbr }}
+            <button type="button" class="statblock-copy" data-copy="{{ test|copyStatBlock }}" data-copy-message="Stat block copied" title="Copy stat block"><i class="fa-regular fa-copy"></i></button>
+        </div>
+        {% if not test.finished and test.approved %}
+            {% with progress=test|workload_progress %}
+                {% if progress is not None %}
+                    <div class="progress {% if test.test_mode == 'SPRT' %}{% if test.currentllr >= 0 %}pos{% else %}neg{% endif %}{% endif %}" title="{{ progress }}%">
+                        <span style="width: {{ progress|stringformat:'.1f' }}%"></span>
+                        {% if test.test_mode == 'SPRT' %}<i class="mid"></i>{% endif %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+    </td>
+    <td class="t-info"><div>{{ test.info }}</div></td>
+</tr>

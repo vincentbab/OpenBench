@@ -24,7 +24,7 @@ import os
 
 from django.db.models import CharField, IntegerField, BigIntegerField, BooleanField, FloatField
 from django.db.models import JSONField, ForeignKey, DateTimeField, OneToOneField
-from django.db.models import CASCADE, PROTECT, Model, TextChoices
+from django.db.models import CASCADE, PROTECT, Index, Model, TextChoices
 from django.contrib.auth.models import User
 
 from OpenSite.settings import MEDIA_ROOT
@@ -288,6 +288,18 @@ class Test(Model):
 
     def workload_type_str(self):
         return {'SPSA' : 'tune', 'DATAGEN' : 'datagen'}.get(self.test_mode, 'test')
+
+class TestHistory(Model):
+
+    test      = ForeignKey('Test', CASCADE, related_name='history')
+    games     = IntegerField()
+    llr       = FloatField(default=0.0)
+    elo       = FloatField(default=0.0)
+    elo_error = FloatField(default=0.0)
+    created   = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [ Index(fields=['test', 'games']) ]
 
 class LogEvent(Model):
 

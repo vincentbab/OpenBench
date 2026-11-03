@@ -29,7 +29,7 @@ import datetime
 
 from collections import defaultdict
 
-from django.db.models import BooleanField, ExpressionWrapper, F, Q
+from django.db.models import BooleanField, Count, ExpressionWrapper, F, Max, Q
 from django.utils import timezone
 
 import OpenBench.views
@@ -44,9 +44,32 @@ def view_workload(request, workload, workload_type):
     # are fetched on demand via the "Fetch Individual Results" button. The
     # aggregate summary is fetched automatically once the page loads.
 
+    profile  = Profile.objects.filter(user=request.user).first() if request.user.is_authenticated else None
+    is_owner = bool(profile and profile.user.username == workload.author)
+
     data = {
-        'workload' : workload,
+        'workload'    : workload,
+        'can_edit'    : bool(profile and (profile.approver or is_owner)),
+        'can_approve' : bool(profile and ((profile.approver and not is_owner) or request.user.is_superuser)),
     }
+
+    errors = LogEvent.objects.filter(test_id=workload.id).exclude(machine_id=0)
+
+    if (error_count := errors.count()):
+
+        by_machine = list(errors.values('machine_id').annotate(count=Count('id'), last=Max('created')).order_by('-count')[:10])
+        names = dict(Machine.objects.filter(id__in=[row['machine_id'] for row in by_machine]).values_list('id', 'info__machine_name'))
+
+        for row in by_machine:
+            row['name'] = names.get(row['machine_id'])
+
+        data['errors'] = {
+            'count'      : error_count,
+            'machines'   : errors.values('machine_id').distinct().count(),
+            'summaries'  : list(errors.values('summary').annotate(count=Count('id')).order_by('-count')[:5]),
+            'by_machine' : by_machine,
+            'recent'     : list(errors.order_by('-id')[:8]),
+        }
 
     if workload_type == 'TEST':
         data['type']= workload_type

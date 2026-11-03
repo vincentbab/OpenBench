@@ -1,20 +1,41 @@
 {% extends "OpenBench/base.html" %}
+{% load static %}
 
-{% block content %}
+{% block title %}Log in · OpenBench{% endblock %}
 
-    <form method="POST" action="/login/">
-        {% csrf_token %}
-        <div class="form">
-            <div class="col">
-                <div class="row">
-                    <label type="text">Username</label> <input type="text" name="username"><br>
+{% block body %}
+    <div class="auth">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                <div>
+                    <h1>OpenBench</h1>
+                    <p>Sign in to continue</p>
                 </div>
-                <div class="row">
-                    <label type="text">Password</label> <input type="password" name="password"><br>
-                </div>
-                <input type="submit" name="submit" value="Login" class="anchorbutton btn-blue w-100">
             </div>
-        </div>
-    </form>
 
+            {% include "OpenBench/Blocks/alerts.html" %}
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="/login/" class="form-grid cols-1">
+                        {% csrf_token %}
+                        <div class="field">
+                            <label for="username">Username</label>
+                            <input id="username" name="username" autocomplete="username" autofocus required>
+                        </div>
+                        <div class="field">
+                            <label for="password">Password</label>
+                            <input id="password" name="password" type="password" autocomplete="current-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg btn-block">Log in</button>
+                    </form>
+                </div>
+            </div>
+
+            {% if not config.require_manual_registration %}
+                <p class="auth-foot">No account yet? <a href="/register/">Create one</a></p>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

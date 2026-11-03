@@ -16,6 +16,13 @@
    sodipodi:docname="logo.svg">
   <defs
      id="defs2">
+    <clipPath
+       id="ob-round">
+      <rect
+         width="250"
+         height="250"
+         rx="28" />
+    </clipPath>
     <inkscape:perspective
        sodipodi:type="inkscape:persp3d"
        inkscape:vp_x="-192.73904 : 85.416586 : 1"
@@ -85,12 +92,14 @@
     </rdf:RDF>
   </metadata>
   <g
+     clip-path="url(#ob-round)">
+  <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(16.1122,-26.054426)">
     <rect
-       style="fill:#94e196;fill-opacity:1;stroke-width:0.264583"
+       style="fill:#84d086;fill-opacity:1;stroke-width:0.264583"
        id="rect873"
        width="250"
        height="250"
@@ -104,9 +113,9 @@
          height="125"
          width="125"
          id="rect875"
-         style="fill:#118c40;fill-opacity:1;stroke-width:0.264583" />
+         style="fill:#0f7c39;fill-opacity:1;stroke-width:0.264583" />
       <rect
-         style="fill:#118c40;fill-opacity:1;stroke-width:0.264583"
+         style="fill:#0f7c39;fill-opacity:1;stroke-width:0.264583"
          id="rect875-3"
          width="125"
          height="125"
@@ -119,6 +128,7 @@
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect18);fill:#000000;fill-opacity:1;stroke:none;" />
     <path
        id="path860"
+       transform="translate(108.88778,151.12769) scale(0.94) translate(-108.88778,-151.12769)"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:88.1944px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';white-space:pre;fill:#0d0208;fill-opacity:1;stroke:none;stroke-width:3.24563"
        d="m 108.88778,78.418988 q -23.454412,0 -36.380997,19.056735 -12.926584,19.056717 -12.926584,53.651967 0,34.4487 12.926584,53.50539 12.926585,19.05675 36.380997,19.05675 23.5877,0 36.51428,-19.05675 12.92658,-19.05669 12.92658,-53.50539 0,-34.59525 -12.92658,-53.651967 -12.92658,-19.056735 -36.51428,-19.056735 z m 0,-40.898628 q 47.97497,0 75.16077,30.197581 27.18582,30.197552 27.18582,83.409749 0,53.06564 -27.18582,83.26322 -27.1858,30.19758 -75.16077,30.19758 -47.841678,0 -75.16075,-30.19758 Q 6.5412263,204.19333 6.5412263,151.12769 6.5412263,97.915493 33.72703,67.717941 61.046102,37.52036 108.88778,37.52036 Z" />
     <path
@@ -129,5 +139,6 @@
        xml:space="preserve"
        id="text851"
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect853);fill:#000000;fill-opacity:1;stroke:none;" />
+  </g>
   </g>
 </svg>

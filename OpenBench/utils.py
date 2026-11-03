@@ -41,7 +41,7 @@ from OpenSite.settings import MEDIA_ROOT, PROJECT_PATH
 
 from OpenBench.config import OPENBENCH_CONFIG, PRESET_TYPES, verify_engine_presets
 from OpenBench.models import *
-from OpenBench.stats import TrinomialSPRT, PentanomialSPRT
+from OpenBench.stats import Elo, TrinomialSPRT, PentanomialSPRT
 
 import OpenBench.views
 import OpenBench.model_utils
@@ -209,16 +209,20 @@ def getRecentMachines(minutes=2):
     target = target - datetime.timedelta(minutes=minutes)
     return Machine.objects.filter(updated__gte=target)
 
-def getMachineStatus(username=None):
+def get_machine_stats(username=None):
 
-    machines = getRecentMachines()
+    machines = getRecentMachines().select_related('user')
 
     if username != None:
         machines = machines.filter(user__username=username)
 
-    return ": {0} Machines / ".format(len(machines)) + \
-           "{0} Threads / ".format(sum([f.info['concurrency'] for f in machines])) + \
-           "{0} MNPS ".format(round(sum([f.info['concurrency'] * f.mnps for f in machines]), 2))
+    machines = list(machines)
+
+    return {
+        'machines' : len(machines),
+        'threads'  : sum(f.info['concurrency'] for f in machines),
+        'mnps'     : round(sum(f.info['concurrency'] * f.mnps for f in machines), 2),
+    }
 
 def getPaging(content, page, url, pagelen=25):
 
@@ -387,19 +391,22 @@ def book_verify(request):
 
     return None
 
-def book_create(request, name):
+def book_create_error(request, name):
 
     # Rejecct Books with strange characters, or names too long for the column
-    if not re.match(r'^[a-zA-Z0-9_.-]{1,32}$', name):
-        return OpenBench.views.redirect(request, '/manage/books/', error='Valid names are 1-32 of [a-zA-Z0-9_.-]')
+    if not re.match(r'^[a-zA-Z0-9_.-]{1,32}$', name) or name == 'new':
+        return 'Valid names are 1-32 of [a-zA-Z0-9_.-]'
 
     # Don't allow duplicates, as Workloads refer to Books by name
     if Book.objects.filter(name=name).exists():
-        error = 'A Book already exists with the name %s' % (name)
-        return OpenBench.views.redirect(request, '/manage/books/', error=error)
+        return 'A Book already exists with the name %s' % (name)
 
-    if (error := book_verify(request)):
-        return OpenBench.views.redirect(request, '/manage/books/', error=error)
+    return book_verify(request)
+
+def book_create(request, name):
+
+    if (error := book_create_error(request, name)):
+        return OpenBench.views.redirect(request, '/manage/books/new/', error=error)
 
     # The only place a Book's name is ever set
     Book.objects.create(
@@ -477,19 +484,22 @@ def engine_fields(request):
         'presets'         : presets,
     }
 
-def engine_create(request, name):
+def engine_create_error(request, name):
 
     # Rejecct Engines with strange characters, or names too long for the column
-    if not re.match(r'^[a-zA-Z0-9_.-]{1,64}$', name):
-        return OpenBench.views.redirect(request, '/manage/engines/', error='Valid names are 1-64 of [a-zA-Z0-9_.-]')
+    if not re.match(r'^[a-zA-Z0-9_.-]{1,64}$', name) or name == 'new':
+        return 'Valid names are 1-64 of [a-zA-Z0-9_.-]'
 
     # Don't allow duplicates, as Workloads refer to Engines by name
     if EngineConfig.objects.filter(name=name).exists():
-        error = 'An Engine already exists with the name %s' % (name)
-        return OpenBench.views.redirect(request, '/manage/engines/', error=error)
+        return 'An Engine already exists with the name %s' % (name)
 
-    if (error := engine_verify(request, name)):
-        return OpenBench.views.redirect(request, '/manage/engines/', error=error)
+    return engine_verify(request, name)
+
+def engine_create(request, name):
+
+    if (error := engine_create_error(request, name)):
+        return OpenBench.views.redirect(request, '/manage/engines/new/', error=error)
 
     # The only place an Engine's name is ever set
     EngineConfig.objects.create(name=name, **engine_fields(request))
@@ -519,6 +529,25 @@ def engine_delete(request, config):
     config.delete()
     return OpenBench.views.redirect(request, '/manage/engines/', status='Deleted Engine %s' % (config.name))
 
+
+def record_test_history(test):
+
+    if test.test_mode not in ('SPRT', 'GAMES') or not test.games:
+        return
+
+    last = TestHistory.objects.filter(test=test).order_by('-games').values_list('games', flat=True).first()
+
+    if last is not None:
+        if test.games <= last:
+            return
+        if not test.finished and test.games - last < max(64, last // 100):
+            return
+
+    lower, elo, upper = Elo(test.results())
+
+    TestHistory.objects.create(
+        test=test, games=test.games, llr=test.currentllr,
+        elo=elo, elo_error=max(upper - elo, elo - lower))
 
 def update_test(request, machine):
 
@@ -614,6 +643,7 @@ def update_test(request, machine):
             test.passed = test.finished = test.games >= test.max_games
 
         test.save()
+        record_test_history(test)
 
         # Update Result object; No risk from concurrent access
         Result.objects.filter(id=result_id).update(

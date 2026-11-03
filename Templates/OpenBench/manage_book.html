@@ -2,45 +2,50 @@
 
 {% block manage %}
 
-    <form method="POST" action="/manage/books/{{book.name}}/edit/">
+    <form method="POST" action="{% if creating %}/manage/books/new/create/{% else %}/manage/books/{{ book.name }}/edit/{% endif %}" class="card" id="book-form" style="max-width: 760px;">
         {% csrf_token %}
-        <div class="form">
-            <div class="col">
-
-                <div class="row">
-                    <label for="name"> Name </label>
-                    <input id="name" readonly value="{{book.name}}">
+        <div class="card-header"><h2><i class="fa-solid fa-book"></i> {% if creating %}New book{% else %}{{ book.name }}{% endif %}</h2></div>
+        <fieldset class="card-body form-grid cols-1" style="border: 0; margin: 0;" {% if not can_manage %}disabled{% endif %}>
+            {% if creating %}
+                <div class="field">
+                    <label for="book-name">Name</label>
+                    <input id="book-name" value="{{ book.name|default:'' }}" required pattern="[a-zA-Z0-9_.\-]{1,32}" placeholder="UHO_4060_v2.epd" title="Letters, digits, dot, dash and underscore" autofocus>
+                    <span class="hint">Cannot be changed later: workloads refer to books by name</span>
                 </div>
-
-                <div class="row">
-                    <label for="source"> Source </label>
-                    <input id="source" name="source" value="{{book.source}}" {% if not can_manage %}readonly{% endif %}>
-                </div>
-
-                <div class="row">
-                    <label for="sha"> Sha256 </label>
-                    <input id="sha" name="sha" value="{{book.sha}}" {% if not can_manage %}readonly{% endif %}>
-                </div>
-
-                <div class="row">
-                    <label for="enabled"> Enabled </label>
-                    <select id="enabled" name="enabled" {% if not can_manage %}disabled{% endif %}>
-                        {% if book.enabled %}
-                            <option selected value="TRUE"> True </option>
-                            <option value="FALSE"> False </option>
-                        {% else %}
-                            <option value="TRUE"> True </option>
-                            <option selected value="FALSE"> False </option>
-                        {% endif %}
-                    </select>
-                </div>
-
-                {% if can_manage %}
-                    <input class="anchorbutton btn-blue w-100" type="submit" value="Update Book">
-                {% endif %}
-
+            {% endif %}
+            <div class="field">
+                <label for="source">Source (.zip)</label>
+                <input id="source" name="source" value="{{ book.source }}" required>
             </div>
-        </div>
+            <div class="field">
+                <label for="sha">SHA-256</label>
+                <input id="sha" name="sha" value="{{ book.sha|default:'' }}" class="mono" required>
+            </div>
+            <div class="field">
+                <label for="enabled">Status</label>
+                <select id="enabled" name="enabled">
+                    <option value="TRUE" {% if book.enabled %}selected{% endif %}>Enabled</option>
+                    <option value="FALSE" {% if not book.enabled %}selected{% endif %}>Disabled</option>
+                </select>
+            </div>
+        </fieldset>
+        {% if can_manage %}
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+                <a class="btn btn-ghost" href="/manage/books/">Cancel</a>
+                <button class="btn btn-primary" type="submit">
+                    {% if creating %}<i class="fa-solid fa-plus"></i> Create book{% else %}<i class="fa-solid fa-floppy-disk"></i> Save book{% endif %}
+                </button>
+            </div>
+        {% endif %}
     </form>
 
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        const book_name = document.getElementById('book-name');
+        if (book_name) document.getElementById('book-form').addEventListener('submit', function () {
+            this.action = '/manage/books/' + encodeURIComponent(book_name.value) + '/create/';
+        });
+    </script>
 {% endblock %}

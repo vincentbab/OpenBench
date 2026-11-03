@@ -2,8 +2,343 @@
 
 {% load static %}
 
-{% block scripts %}
+{% block title %}{{ submit_text }} · OpenBench{% endblock %}
 
+{% block content %}
+
+    <div class="page-header">
+        <div>
+            <h1>{% if workload == "TUNE" %}New SPSA tune{% elif workload == "DATAGEN" %}New datagen{% else %}New engine test{% endif %}</h1>
+            <div class="subtitle">Pick a preset, then adjust anything you need</div>
+        </div>
+        <div class="tabs" style="margin: 0; border: 0;">
+            <a href="/test/new/" class="{% if workload == 'TEST' %}active{% endif %}"><i class="fa-solid fa-flask"></i> Test</a>
+            <a href="/tune/new/" class="{% if workload == 'TUNE' %}active{% endif %}"><i class="fa-solid fa-sliders"></i> Tune</a>
+            <a href="/datagen/new/" class="{% if workload == 'DATAGEN' %}active{% endif %}"><i class="fa-solid fa-database"></i> Datagen</a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ submit_endpoint }}" class="stack" id="workload-form">
+        {% csrf_token %}
+
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Presets</h2>
+                <span class="muted">Defined per engine in Manage › Engines</span>
+            </div>
+            <div class="card-body">
+                <div class="chip-group" id="test-mode-buttons"></div>
+            </div>
+        </section>
+
+        <div class="grid-2">
+
+            <section class="card">
+                <div class="card-header"><h2><i class="fa-solid fa-code-branch"></i> {{ dev_title_text }}</h2></div>
+                <div class="card-body form-grid">
+                    <div class="field">
+                        <label for="dev_engine">Engine</label>
+                        <select id="dev_engine" name="dev_engine" onchange="change_engine(value, 'dev', '{{ workload }}');">
+                            {% for engine in engines %}
+                                <option value="{{ engine.name }}">{{ engine.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="dev_branch">Branch</label>
+                        <input id="dev_branch" name="dev_branch" placeholder="branch, tag or commit" autofocus required>
+                    </div>
+                    <div class="field span-all">
+                        <label for="dev_repo">Source</label>
+                        <input id="dev_repo" name="dev_repo">
+                    </div>
+                    <div class="field">
+                        <label for="dev_bench">Bench</label>
+                        <input id="dev_bench" name="dev_bench" value="Autofill" class="mono">
+                    </div>
+                    <div class="field">
+                        <label for="dev_network">Network</label>
+                        <select id="dev_network" name="dev_network"></select>
+                    </div>
+                    <div class="field">
+                        <label for="dev_options">Options</label>
+                        <input id="dev_options" name="dev_options" class="mono">
+                    </div>
+                    <div class="field">
+                        <label for="dev_time_control">Time control</label>
+                        <input id="dev_time_control" name="dev_time_control" class="mono" placeholder="8.0+0.08">
+                    </div>
+                </div>
+            </section>
+
+            {% if workload == "TEST" or workload == "DATAGEN" %}
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-code-merge"></i> Base</h2></div>
+                    <div class="card-body form-grid">
+                        <div class="field">
+                            <label for="base_engine">Engine</label>
+                            <select id="base_engine" name="base_engine" onchange="change_engine(value, 'base', '{{ workload }}');">
+                                {% for engine in engines %}
+                                    <option value="{{ engine.name }}">{{ engine.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="base_branch">Branch</label>
+                            <input id="base_branch" name="base_branch" placeholder="branch, tag or commit">
+                        </div>
+                        <div class="field span-all">
+                            <label for="base_repo">Source</label>
+                            <input id="base_repo" name="base_repo">
+                        </div>
+                        <div class="field">
+                            <label for="base_bench">Bench</label>
+                            <input id="base_bench" name="base_bench" value="Autofill" class="mono">
+                        </div>
+                        <div class="field">
+                            <label for="base_network">Network</label>
+                            <select id="base_network" name="base_network"></select>
+                        </div>
+                        <div class="field">
+                            <label for="base_options">Options</label>
+                            <input id="base_options" name="base_options" class="mono">
+                        </div>
+                        <div class="field">
+                            <label for="base_time_control">Time control</label>
+                            <input id="base_time_control" name="base_time_control" class="mono" placeholder="8.0+0.08">
+                        </div>
+                    </div>
+                </section>
+            {% elif workload == "TUNE" %}
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-sliders"></i> SPSA</h2></div>
+                    <div class="card-body form-grid">
+                        <div class="field">
+                            <label for="spsa_alpha">Alpha</label>
+                            <input id="spsa_alpha" name="spsa_alpha" value="0.602">
+                        </div>
+                        <div class="field">
+                            <label for="spsa_gamma">Gamma</label>
+                            <input id="spsa_gamma" name="spsa_gamma" value="0.101">
+                        </div>
+                        <div class="field">
+                            <label for="spsa_A_ratio">A-ratio</label>
+                            <input id="spsa_A_ratio" name="spsa_A_ratio" value="0.1">
+                        </div>
+                        <div class="field">
+                            <label for="spsa_iterations">Iterations</label>
+                            <input id="spsa_iterations" name="spsa_iterations" value="25000">
+                        </div>
+                        <div class="field">
+                            <label for="spsa_pairs_per">Pairs per point</label>
+                            <input id="spsa_pairs_per" name="spsa_pairs_per" value="8">
+                        </div>
+                        <div class="field">
+                            <label for="spsa_reporting_type">Reporting</label>
+                            <select id="spsa_reporting_type" name="spsa_reporting_type">
+                                <option selected value="BATCHED">Batched</option>
+                                <option value="BULK">Bulk</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="spsa_distribution_type">Distribution</label>
+                            <select id="spsa_distribution_type" name="spsa_distribution_type">
+                                <option selected value="SINGLE">Single</option>
+                                <option value="MULTIPLE">Multiple</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
+        </div>
+
+        {% if workload == "TUNE" %}
+            <section class="card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-table-list"></i> SPSA input</h2>
+                    <span class="muted mono">name, int|float, start, min, max, c, r</span>
+                </div>
+                <div class="card-body field">
+                    <textarea id="spsa_inputs" name="spsa_inputs" rows="10" class="mono" spellcheck="false"></textarea>
+                </div>
+            </section>
+        {% endif %}
+
+        <div class="grid-2">
+
+            <div class="stack">
+                {% if workload == "TEST" %}
+                    <section class="card">
+                        <div class="card-header"><h2><i class="fa-solid fa-scale-balanced"></i> Test</h2></div>
+                        <div class="card-body form-grid">
+                            <div class="field span-all">
+                                <label for="test_mode">Mode</label>
+                                <select onchange="set_test_type()" id="test_mode" name="test_mode">
+                                    <option selected value="SPRT">SPRT</option>
+                                    <option value="GAMES">Fixed games</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="test_bounds">Elo bounds</label>
+                                <input id="test_bounds" name="test_bounds" class="mono" placeholder="[0.00, 3.00]">
+                            </div>
+                            <div class="field">
+                                <label for="test_confidence">Confidence</label>
+                                <input id="test_confidence" name="test_confidence" class="mono" placeholder="[0.05, 0.05]">
+                            </div>
+                            <div class="field span-all">
+                                <label for="test_max_games">Max games</label>
+                                <input id="test_max_games" name="test_max_games">
+                            </div>
+                        </div>
+                    </section>
+                {% elif workload == "DATAGEN" %}
+                    <section class="card">
+                        <div class="card-header"><h2><i class="fa-solid fa-database"></i> Datagen</h2></div>
+                        <div class="card-body form-grid">
+                            <div class="field">
+                                <label for="datagen_max_games">Max games</label>
+                                <input id="datagen_max_games" name="datagen_max_games">
+                            </div>
+                            <div class="field">
+                                <label for="datagen_play_reverses">Play reverses</label>
+                                <select id="datagen_play_reverses" name="datagen_play_reverses">
+                                    <option value="YES">Yes</option>
+                                    <option selected value="NO">No</option>
+                                </select>
+                            </div>
+                            <div class="field span-all">
+                                <label for="datagen_custom_genfens">Genfens args</label>
+                                <input id="datagen_custom_genfens" name="datagen_custom_genfens" class="mono">
+                            </div>
+                        </div>
+                    </section>
+                {% endif %}
+
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-gavel"></i> Adjudication</h2></div>
+                    <div class="card-body form-grid">
+                        <div class="field">
+                            <label for="syzygy_adj">Syzygy adjudication</label>
+                            <select id="syzygy_adj" name="syzygy_adj">
+                                <option value="DISABLED">Disabled</option>
+                                <option selected value="OPTIONAL">Optional</option>
+                                <option value="7-MAN">7-man</option>
+                                <option value="6-MAN">6-man</option>
+                                <option value="5-MAN">5-man</option>
+                                <option value="4-MAN">4-man</option>
+                                <option value="3-MAN">3-man</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="syzygy_wdl">Syzygy WDL</label>
+                            <select id="syzygy_wdl" name="syzygy_wdl">
+                                <option selected value="DISABLED">Disabled</option>
+                                <option value="OPTIONAL">Optional</option>
+                                <option value="7-MAN">7-man</option>
+                                <option value="6-MAN">6-man</option>
+                                <option value="5-MAN">5-man</option>
+                                <option value="4-MAN">4-man</option>
+                                <option value="3-MAN">3-man</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="win_adj">Win adjudication</label>
+                            <input id="win_adj" name="win_adj" class="mono">
+                        </div>
+                        <div class="field">
+                            <label for="draw_adj">Draw adjudication</label>
+                            <input id="draw_adj" name="draw_adj" class="mono">
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="stack">
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-gear"></i> General</h2></div>
+                    <div class="card-body form-grid">
+                        <div class="field">
+                            <label for="book_name">Opening book</label>
+                            <select id="book_name" name="book_name">
+                                <option selected value="NONE">None</option>
+                                {% for book in books %}
+                                    <option value="{{ book.name }}">{{ book.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="upload_pgns">Upload PGNs</label>
+                            <select id="upload_pgns" name="upload_pgns">
+                                {% if workload == "DATAGEN" %}
+                                    <option selected value="COMPACT">Compact</option>
+                                    <option value="VERBOSE">Verbose</option>
+                                {% else %}
+                                    <option selected value="FALSE">No</option>
+                                    <option value="COMPACT">Compact</option>
+                                    <option value="VERBOSE">Verbose</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="priority">Priority</label>
+                            <input id="priority" name="priority" value="0" type="number">
+                        </div>
+                        <div class="field">
+                            <label for="throughput">Throughput</label>
+                            <input id="throughput" name="throughput" value="1000" type="number" min="1">
+                        </div>
+                        {% if workload == "TEST" or workload == "DATAGEN" %}
+                            <div class="field">
+                                <label for="workload_size">Workload size</label>
+                                <input id="workload_size" name="workload_size" type="number" min="1">
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header"><h2><i class="fa-solid fa-gauge-high"></i> Scaling</h2></div>
+                    <div class="card-body form-grid">
+                        <div class="field">
+                            <label for="scale_method">Scale method</label>
+                            <select id="scale_method" name="scale_method">
+                                {% if workload == "TEST" or workload == "DATAGEN" %}
+                                    <option value="DEV">Dev engine</option>
+                                    <option value="BASE">Base engine</option>
+                                    <option value="BOTH">Both engines</option>
+                                {% else %}
+                                    <option selected value="DEV">Engine</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="scale_nps">Expected NPS</label>
+                            <input id="scale_nps" name="scale_nps">
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+
+        <section class="card">
+            <div class="card-header"><h2><i class="fa-solid fa-circle-info"></i> Info</h2></div>
+            <div class="card-body field">
+                <textarea id="info" name="info" rows="3" placeholder="What does this change do?"></textarea>
+            </div>
+        </section>
+
+        <div class="sticky-actions">
+            <span class="muted" id="preset-summary"></span>
+            <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-play"></i> {{ submit_text }}</button>
+        </div>
+    </form>
+
+{% endblock %}
+
+{% block scripts %}
     {{ config|json_script:"json-config" }}
     {{ engine_configs|json_script:"json-engines" }}
     {{ networks|json_script:"json-networks" }}
@@ -13,301 +348,10 @@
     <script src="{% static 'default_text.js' %}?{{ static_version }}"></script>
 
     <script>
-        document.addEventListener(
-            'DOMContentLoaded', function () {
-                change_engine('{{ profile.engine }}', 'dev', '{{workload}}');
-                enforce_default_text('dev_repo', 'https://github.com/');
-                enforce_default_text('base_repo', 'https://github.com/');
-            }, false
-        );
+        enforce_default_text('dev_repo', 'https://github.com/');
+        enforce_default_text('base_repo', 'https://github.com/');
+        document.addEventListener('DOMContentLoaded', function () {
+            change_engine('{{ profile.engine }}', 'dev', '{{ workload }}');
+        });
     </script>
-{% endblock %}
-
-{% block content %}
-
-    <form method="POST" action="{{submit_endpoint}}">
-        {% csrf_token %}
-
-        <div class="form w-100">
-            <div class="col">
-
-                <h3> Engines </h3>
-
-                <div class="row">
-                    <label for="dev_engine"> {{dev_text}} Engine </label>
-                    <select id="dev_engine" name="dev_engine" onchange="change_engine(value, 'dev', '{{workload}}');">
-                        {% for engine in engines %}
-                            <option value="{{ engine.name }}">{{ engine.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="row">
-                    <label for="dev_repo"> {{dev_text}} Source </label> <input id="dev_repo" name="dev_repo">
-                </div>
-
-                {% if workload == "TEST" or workload == "DATAGEN" %}
-                    <div class="row">
-                        <label for="base_engine"> Base Engine </label>
-                        <select id="base_engine" name="base_engine" onchange="change_engine(value, 'base', '{{workload}}');">
-                            {% for engine in engines %}
-                                <option value="{{ engine.name }}">{{ engine.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="row">
-                        <label for="base_repo"> Base Source </label> <input id="base_repo" name="base_repo">
-                    </div>
-                {% endif %}
-
-                <h3> {{dev_title_text}} Settings </h3>
-
-                <div class="row">
-                    <label for="dev_branch" > {{dev_text}} Branch </label> <input id="dev_branch" name="dev_branch" autofocus>
-                </div>
-                <div class="row">
-                    <label for="dev_bench" > {{dev_text}} Bench </label> <input value="Autofill" id="dev_bench" name="dev_bench">
-                </div>
-                <div class="row">
-                    <label for="dev_network" > {{dev_text}} Network </label> <select id="dev_network" name="dev_network"></select>
-                </div>
-                <div class="row">
-                    <label for="dev_options"> {{dev_text}} Options </label> <input id="dev_options" name="dev_options">
-                </div>
-                <div class="row">
-                    <label for="dev_time_control"> {{dev_text}} Time </label> <input id="dev_time_control" name="dev_time_control">
-                </div>
-
-                {% if workload == "TEST" or workload == "DATAGEN" %}
-
-                    <h3> Base Settings </h3>
-
-                    <div class="row">
-                        <label for="base_branch"> Base Branch </label> <input id="base_branch" name="base_branch">
-                    </div>
-                    <div class="row">
-                        <label for="base_bench"> Base Bench </label> <input value="Autofill" id="base_bench" name="base_bench">
-                    </div>
-                    <div class="row">
-                        <label for="base_network"> Base Network </label> <select id="base_network" name="base_network"></select>
-                    </div>
-                    <div class="row">
-                        <label for="base_options"> Base Options </label> <input id="base_options" name="base_options">
-                    </div>
-                    <div class="row">
-                        <label for="base_time_control" > Base Time </label> <input id="base_time_control" name="base_time_control">
-                    </div>
-
-                    <h3> Information </h3>
-
-                    <div class="row">
-                        <label for="info"> Info </label> <textarea id="info" name="info" rows="4"></textarea>
-                    </div>
-
-                {% elif workload == "TUNE" %}
-
-                    <h3> SPSA Methodologies </h3>
-
-                    <div class="row">
-                        <label for="spsa_reporting_type"> Reporting </label>
-                        <select id="spsa_reporting_type" name="spsa_reporting_type">
-                            <option selected value="BATCHED"> Batched </option>
-                            <option value="BULK"> Bulk </option>
-                        </select>
-                    </div>
-
-                    <div class="row">
-                        <label for="spsa_distribution_type"> Distribution </label>
-                        <select id="spsa_distribution_type" name="spsa_distribution_type">
-                            <option selected value="SINGLE"> Single </option>
-                            <option value="MULTIPLE"> Multiple </option>
-                        </select>
-                    </div>
-
-                    <h3> Information </h3>
-
-                    <div class="row">
-                        <label for="info"> Info </label> <textarea id="info" name="info" rows="4"></textarea>
-                    </div>
-
-                    <h3> SPSA Input </h3>
-
-                    <div class="row">
-                        <textarea style="margin-left:24px" id="spsa_inputs" name="spsa_inputs" rows=9></textarea>
-                    </div>
-
-                {% endif %}
-
-            </div>
-
-            <div class="col">
-
-                {% if workload == "TEST" %}
-
-                    <h3> Test Settings </h3>
-
-                    <div class="row">
-                        <label for="test_mode"> Test Mode </label>
-                        <select onchange='set_test_type()' id="test_mode" name="test_mode">
-                            <option selected value="SPRT"> SPRT</option>
-                            <option value="GAMES"> Fixed Games</option>
-                        </select>
-                    </div>
-
-                    <div class="row">
-                        <label for="test_bounds"> Bounds </label> <input id="test_bounds" name="test_bounds">
-                    </div>
-
-                    <div class="row">
-                        <label for="test_confidence"> Confidence </label> <input id="test_confidence" name="test_confidence">
-                    </div>
-
-                    <div class="row">
-                        <label for="test_max_games"> Max Games </label> <input id="test_max_games" name="test_max_games">
-                    </div>
-
-                {% elif workload == "TUNE" %}
-
-                    <h3> SPSA Settings </h3>
-
-                    <div class="row">
-                        <label for="spsa_alpha"> Alpha </label> <input value="0.602" id="spsa_alpha" name="spsa_alpha">
-                    </div>
-                    <div class="row">
-                        <label for="spsa_gamma"> Gamma </label> <input value="0.101" id="spsa_gamma" name="spsa_gamma">
-                    </div>
-                    <div class="row">
-                        <label for="spsa_A_ratio"> A-Ratio </label> <input value="0.1" id="spsa_A_ratio" name="spsa_A_ratio">
-                    </div>
-                    <div class="row">
-                        <label for="spsa_iterations"> Iterations </label> <input value="25000" id="spsa_iterations" name="spsa_iterations">
-                    </div>
-                    <div class="row">
-                        <label for="spsa_pairs_per"> Pairs-Per </label> <input value="8" id="spsa_pairs_per" name="spsa_pairs_per">
-                    </div>
-
-                {% elif workload == "DATAGEN" %}
-
-                    <h3> Datagen Settings </h3>
-
-                    <div class="row">
-                        <label for="datagen_max_games"> Max Games </label> <input id="datagen_max_games" name="datagen_max_games">
-                    </div>
-
-                    <div class="row">
-                        <label for="datagen_custom_genfens"> Genfens Args </label> <input id="datagen_custom_genfens" name="datagen_custom_genfens">
-                    </div>
-
-                    <div class="row">
-                        <label for="test_mode"> Play Reverses </label>
-                        <select id="datagen_play_reverses" name="datagen_play_reverses">
-                            <option value="YES"> Yes </option>
-                            <option selected value="NO"> No </option>
-                        </select>
-                    </div>
-
-                {% endif %}
-
-                <h3> General Settings </h3>
-
-                <div class="row">
-                    <label for="book_name"> Opening Book </label> <select id="book_name" name="book_name">
-                    <option selected value="NONE"> None </option>
-                    {% for book in books %}
-                        <option value="{{ book.name }}">{{ book.name }}</option>
-                    {% endfor %}
-                    </select>
-                </div>
-
-                <div class="row">
-                    <label for="upload_pgns"> Upload PGNs </label>
-                    <select id="upload_pgns" name="upload_pgns">
-                        {% if workload == "DATAGEN" %}
-                            <option selected value="COMPACT"> Compact </option>
-                            <option value="VERBOSE"> Verbose </option>
-                        {% else %}
-                            <option selected value="FALSE"> False </option>
-                            <option value="COMPACT"> Compact </option>
-                            <option value="VERBOSE"> Verbose </option>
-                        {% endif %}
-                    </select>
-                </div>
-
-                <div class="row">
-                    <label for="priority"> Priority </label> <input value="0" id="priority" name="priority">
-                </div>
-
-                <div class="row">
-                    <label for="throughput"> Throughput </label> <input value="1000" id="throughput" , name="throughput">
-                </div>
-
-                {% if workload == "TEST" or workload == "DATAGEN" %}
-                    <div class="row">
-                        <label for="workload_size"> Workload Size </label> <input id="workload_size" name="workload_size">
-                    </div>
-                {% endif %}
-
-                <div class="row">
-                    <label for="syzygy_wdl"> Syzygy WDL </label> <select id="syzygy_wdl" name="syzygy_wdl">
-                        <option selected value="DISABLED"> Disabled </option>
-                        <option value="OPTIONAL"> Optional </option>
-                        <option value="7-MAN"> 7-Man </option>
-                        <option value="6-MAN"> 6-Man </option>
-                        <option value="5-MAN"> 5-Man </option>
-                        <option value="4-MAN"> 4-Man </option>
-                        <option value="3-MAN"> 3-Man </option>
-                    </select>
-                </div>
-
-                <h3> Adjudication Settings </h3>
-                <div class="row">
-                    <label for="syzygy_adj"> Syzygy ADJ. </label>
-                    <select id="syzygy_adj" name="syzygy_adj">
-                        <option value="DISABLED"> Disabled </option>
-                        <option selected value="OPTIONAL"> Optional </option>
-                        <option value="7-MAN"> 7-Man </option>
-                        <option value="6-MAN"> 6-Man </option>
-                        <option value="5-MAN"> 5-Man </option>
-                        <option value="4-MAN"> 4-Man </option>
-                        <option value="3-MAN"> 3-Man </option>
-                    </select>
-                </div>
-                <div class="row">
-                    <label for="win_adj"> Win ADJ. </label> <input id="win_adj" name="win_adj">
-                </div>
-                <div class="row">
-                    <label for="draw_adj"> Draw ADJ. </label> <input id="draw_adj" name="draw_adj">
-                </div>
-
-                <h3> Scaling Settings </h3>
-                <div class="row">
-                    <label for="scale_method"> Scale Method </label>
-                    <select id="scale_method" name="scale_method">
-                        {% if workload == "TEST" or workload == "DATAGEN" %}
-                            <option value="DEV"> Dev Engine </option>
-                            <option value="BASE"> Base Engine </option>
-                            <option value="BOTH"> Both Engines </option>
-                        {% else %}
-                            <option selected value="DEV"> Engine </option>
-                        {% endif %}
-                    </select>
-                </div>
-                <div class="row">
-                    <label for="scale_nps"> Expected NPS </label> <input id="scale_nps" name="scale_nps">
-                </div>
-            </div>
-        </div>
-
-        <input type="submit" class="anchorbutton btn-start mt-3 mw-84" name="submit" value="{{submit_text}}">
-    </form>
-
-    <div class="form">
-        <div class="col-full">
-            <div id="test-mode-buttons">
-                <!-- Generated based on the selected Engine -->
-            </div>
-        </div>
-    </div>
-
 {% endblock %}

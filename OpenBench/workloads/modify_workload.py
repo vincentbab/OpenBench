@@ -63,8 +63,7 @@ def modify_workload(request, id, action=None):
     LogEvent.objects.create(author=request.user.username, summary=action, log_file='', test_id=id)
     workload.save()
 
-    # Send back to the index, notifying them of the success
-    return OpenBench.views.redirect(request, '/index/', status=message)
+    return OpenBench.views.redirect(request, '/%s/%d/' % (workload.workload_type_str(), workload.id), status=message)
 
 def approve_workload(request, profile, workload):
     workload.approved = True;

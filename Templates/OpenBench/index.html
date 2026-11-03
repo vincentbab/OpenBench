@@ -1,58 +1,106 @@
 {% extends "OpenBench/base.html" %}
 
-{% load mytags %}
+{% block title %}{{ heading }} · OpenBench{% endblock %}
+
+{% block main_attrs %}{% if paging.page == 1 %}data-live-interval="10000"{% endif %}{% endblock %}
 
 {% block content %}
 
-{% block scripts %}
-<style>
-    #content {
-        max-width: 100%;
-    }
-</style>
-{% endblock %}
+    <div class="page-header">
+        <div>
+            <h1>{{ heading }}</h1>
+        </div>
+        <div class="page-actions">
+            {% if paging.page == 1 %}
+                <span class="live-indicator" id="live-indicator"><span class="pulse"></span><span class="live-label">Live</span></span>
+            {% endif %}
+            <a class="btn btn-primary" href="/test/new/"><i class="fa-solid fa-plus"></i> New test</a>
+        </div>
+    </div>
 
-    <table class="test-list stripes hoverable">
+    <div id="tests-live" data-live class="stack">
 
-        <!-- Only show Pending tests for the front page of the Index -->
+        {% if stats %}
+            <div class="stats-bar">
+                <span class="stat-pill"><i class="fa-solid fa-microchip"></i><b>{{ stats.machines }}</b> machines</span>
+                <span class="stat-pill"><i class="fa-solid fa-layer-group"></i><b>{{ stats.threads }}</b> threads</span>
+                <span class="stat-pill"><i class="fa-solid fa-gauge-high"></i><b>{{ stats.mnps }}</b> MNPS</span>
+                {% if paging.page == 1 and active_count is not None %}
+                    <span class="stat-pill"><i class="fa-solid fa-play"></i><b>{{ active_count }}</b> active</span>
+                {% endif %}
+            </div>
+        {% endif %}
+
         {% if paging.page == 1 %}
 
-            <!-- Currently Pending tests (Waiting to be approved) -->
             {% if pending %}
-                <tr class="table-header"><th colspan='7'>Pending</th></tr>
-                {% for test in pending %}
-                    <tr class="test-row">
-                        {% include "OpenBench/Blocks/testsummary.html" %}
-                    </tr>
-                {% endfor %}
-                <tr class="table-spacer"><th colspan='7'></th></tr>
+                <section class="card">
+                    <div class="card-header">
+                        <h2><span class="badge warn"><i class="fa-solid fa-hourglass-half"></i></span> Pending approval <span class="count">{{ pending|length }}</span></h2>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table test-table">
+                            {% include "OpenBench/Blocks/testhead.html" %}
+                            <tbody>
+                                {% for test in pending %}
+                                    {% include "OpenBench/Blocks/testrow.html" %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             {% endif %}
 
-            <!-- Currently Running tests (Waiting to be completed) -->
             {% if active %}
-                <tr class="table-header"><th colspan='7'>Active {{status}}</th></tr>
-                {% for group in active %}
-                    <tr class="table-small-header"><th colspan='7'>Priority {{group.priority}}</th></tr>
-                    {% for test in group.tests %}
-                        <tr class="test-row">
-                            {% include "OpenBench/Blocks/testsummary.html" %}
-                        </tr>
-                    {% endfor %}
-                {% endfor %}
-                <tr class="table-spacer"><th colspan='7'></th></tr>
+                <section class="card">
+                    <div class="card-header">
+                        <h2><span class="badge run"><span class="pulse"></span></span> Active <span class="count">{{ active_count }}</span></h2>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table test-table">
+                            {% include "OpenBench/Blocks/testhead.html" %}
+                            <tbody>
+                                {% for group in active %}
+                                    {% if active|length > 1 %}
+                                        <tr class="group-row"><td colspan="7">Priority {{ group.priority }}</td></tr>
+                                    {% endif %}
+                                    {% for test in group.tests %}
+                                        {% include "OpenBench/Blocks/testrow.html" %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% elif stats %}
+                <section class="card">
+                    <div class="empty"><i class="fa-solid fa-mug-hot"></i>No active tests right now</div>
+                </section>
             {% endif %}
 
         {% endif %}
 
-        <!-- Tests which have already finished -->
-        <tr class="table-header"><th colspan='7'>Finished</th></tr>
-        {% for test in completed %}
-            <tr class="test-row">
-                {% include "OpenBench/Blocks/testsummary.html" %}
-            </tr>
-        {% endfor %}
+        <section class="card">
+            <div class="card-header">
+                <h2>{% if heading == "Greens" %}Passed tests{% else %}Finished{% endif %}</h2>
+            </div>
+            {% if completed %}
+                <div class="table-wrap">
+                    <table class="table test-table">
+                        {% include "OpenBench/Blocks/testhead.html" %}
+                        <tbody>
+                            {% for test in completed %}
+                                {% include "OpenBench/Blocks/testrow.html" %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty"><i class="fa-regular fa-folder-open"></i>Nothing here yet</div>
+            {% endif %}
+        </section>
 
-    </table>
+    </div>
 
     {% include "OpenBench/Blocks/pagebrowser.html" %}
 

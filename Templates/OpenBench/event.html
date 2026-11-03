@@ -1,7 +1,21 @@
-<!DOCTYPE html>
+{% extends "OpenBench/base.html" %}
 
-<html lang="en">
-    <body>
-        <pre>{{content}}</pre>
-    </body>
-</html>
+{% block title %}Logs · OpenBench{% endblock %}
+
+{% block content %}
+
+    <div class="page-header">
+        <h1>Logs</h1>
+        <div class="page-actions">
+            <button class="btn" onclick="OB.copy(document.getElementById('log-content').textContent, 'Logs copied')"><i class="fa-regular fa-copy"></i> Copy</button>
+            <a class="btn" href="/errors/"><i class="fa-solid fa-arrow-left"></i> Errors</a>
+        </div>
+    </div>
+
+    <section class="card">
+        <div class="card-body">
+            <pre class="long-statblock" id="log-content" style="white-space: pre-wrap;">{{ content }}</pre>
+        </div>
+    </section>
+
+{% endblock %}

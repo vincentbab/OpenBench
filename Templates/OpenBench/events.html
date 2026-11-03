@@ -2,29 +2,54 @@
 
 {% load mytags %}
 
+{% block title %}Events · OpenBench{% endblock %}
+
 {% block content %}
 
-    <table class="hoverable">
+    <div class="page-header">
+        <div>
+            <h1>Events</h1>
+            <div class="subtitle">Actions performed on workloads</div>
+        </div>
+    </div>
 
-        <tr class="table-header">
-            <th>Date</th>
-            <th>User</th>
-            <th>Test</th>
-            <th>TC</th>
-            <th>Summary</th>
-        </tr>
-
-        {% for event in events %}
-            <tr>
-                <td class="timestamp">{{event.created|date:'U'}}</td>
-                <td>{{event.author|capfirst}}</td>
-                <td><a href="{{event.test_id|workload_url}}">{{event.test_id|testIdToPrettyName}}</a></td>
-                <td>{{event.test_id|testIdToTimeControl}}</td>
-                <td>{{event.summary}}</td>
-            </tr>
-        {% endfor %}
-
-    <table>
+    <section class="card">
+        {% if events %}
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Workload</th>
+                            <th>TC</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                            <tr>
+                                <td class="muted nowrap"><span class="timestamp">{{ event.created|date:'U' }}</span></td>
+                                <td>{{ event.author|capfirst }}</td>
+                                <td><a href="{{ event.test_id|workload_url }}">{{ event.test_id|testIdToPrettyName }}</a></td>
+                                <td class="mono">{{ event.test_id|testIdToTimeControl }}</td>
+                                <td>
+                                    {% if event.summary == "APPROVE" %}<span class="badge pass">Approve</span>
+                                    {% elif event.summary == "DELETE" %}<span class="badge fail">Delete</span>
+                                    {% elif event.summary == "STOP" %}<span class="badge warn">Stop</span>
+                                    {% elif event.summary == "RESTART" or event.summary == "RESTORE" %}<span class="badge info">{{ event.summary|lower|capfirst }}</span>
+                                    {% elif event.summary == "MODIFY" %}<span class="badge">Modify</span>
+                                    {% else %}{{ event.summary }}{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty"><i class="fa-regular fa-calendar"></i>No events yet</div>
+        {% endif %}
+    </section>
 
     {% include "OpenBench/Blocks/pagebrowser.html" %}
 

@@ -48,40 +48,36 @@ function create_preset_buttons(engine, workload_type) {
                   : workload_type == 'TUNE'    ? engines[engine].tune_presets
                   : workload_type == 'DATAGEN' ? engines[engine].datagen_presets : {};
 
-    var index = 0;
     for (let mode in presets) {
 
-        // Don't include the global defaults
         if (mode == 'default')
             continue;
 
-        // Create a new button for the test mode
-        var btn       = document.createElement('button')
-        btn.innerHTML = mode;
-        btn.onclick   = function() { apply_preset(mode, workload_type); };
-
-        // Apply all of our CSS bootstrapping
-        btn.classList.add('anchorbutton');
-        btn.classList.add('btn-preset');
-        btn.classList.add('mt-1');
-        btn.classList.add('w-100');
-
-        // Put the button in a div, so we can handle padding
-        var div = document.createElement('div')
-        div.appendChild(btn)
-        div.classList.add('col-half');
-
-        // Left pad everything but the first
-        if ((index % 4) != 0)
-            div.classList.add('pl-half');
-
-        // Right pad everything but the last
-        if ((index % 4) != 3)
-            div.classList.add('pr-half');
-
-        button_div.append(div);
-        index++;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.textContent = mode;
+        btn.dataset.preset = mode;
+        btn.onclick = function() { apply_preset(mode, workload_type); };
+        button_div.append(btn);
     }
+
+    if (!button_div.hasChildNodes()) {
+        var none = document.createElement('span');
+        none.className = 'muted';
+        none.textContent = 'No presets defined for ' + engine;
+        button_div.append(none);
+    }
+}
+
+function mark_active_preset(preset) {
+    document.querySelectorAll('#test-mode-buttons .chip').forEach(function(chip) {
+        chip.classList.toggle('active', chip.dataset.preset === preset);
+    });
+
+    var summary = document.getElementById('preset-summary');
+    if (summary)
+        summary.textContent = preset && preset != 'default' ? 'Preset: ' + preset : '';
 }
 
 
@@ -220,9 +216,18 @@ function apply_preset(preset, workload_type) {
             retain_specific_options(get_base_engine(), preset, workload_type);
         } catch (error) {}
     }
+
+    if (preset != 'default')
+        mark_active_preset(preset);
 }
 
 function change_engine(engine, target, workload_type) {
+
+    if (!engines[engine])
+        engine = document.getElementById(target + '_engine').value;
+
+    if (!engines[engine])
+        return;
 
     set_engine(engine, target);
 
@@ -235,7 +240,20 @@ function change_engine(engine, target, workload_type) {
     set_option('scale_nps', engines[engine].nps);
     set_option('scale_method', workload_type == 'TUNE' ? 'DEV' : 'BASE');
 
-    apply_preset('STC', workload_type);
+    apply_preset(initial_preset(get_dev_engine(), workload_type), workload_type);
+}
+
+function initial_preset(engine, workload_type) {
+
+    const presets = workload_type == 'TEST'    ? engines[engine].test_presets
+                  : workload_type == 'TUNE'    ? engines[engine].tune_presets
+                  : workload_type == 'DATAGEN' ? engines[engine].datagen_presets : {};
+
+    if (presets && presets['STC'])
+        return 'STC';
+
+    const names = Object.keys(presets || {}).filter(name => name != 'default');
+    return names.length ? names[0] : 'default';
 }
 
 function set_test_type() {

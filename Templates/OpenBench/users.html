@@ -2,30 +2,53 @@
 
 {% load mytags %}
 
+{% block title %}Users · OpenBench{% endblock %}
+
 {% block content %}
 
-    <table class="hoverable">
+    <div class="page-header">
+        <div>
+            <h1>Users</h1>
+            <div class="subtitle">Ranked by games played</div>
+        </div>
+    </div>
 
-        <tr class="table-header">
-            <th>Username</th>
-            <th>Games</th>
-            <th>Tests</th>
-            <th>Engine</th>
-            <th>Created</th>
-        </tr>
-
-        {% for profile in profiles %}
-            {% if profile.games or profile.tests or profile.approver %}
-                <tr>
-                    <td><a href="/user/{{profile.user.username}}">{{profile.user.username|capfirst}}</a></td>
-                    <td style="text-align: right">{{profile.games|insertCommas}}</td>
-                    <td style="text-align: right">{{profile.tests|insertCommas}}</td>
-                    <td>{{profile.engine}}</td>
-                    <td class="timestamp">{{profile.user.date_joined|date:'U'}}</td>
-                </tr>
-            {% endif %}
-        {% endfor %}
-
-    </table>
+    <section class="card">
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th class="num">Games</th>
+                        <th class="num">Tests</th>
+                        <th>Engine</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in profiles %}
+                        {% if profile.games or profile.tests or profile.approver %}
+                            <tr>
+                                <td>
+                                    <a href="/user/{{ profile.user.username }}/" style="display: inline-flex; align-items: center; gap: 8px;">
+                                        <span class="avatar">{{ profile.user.username|slice:':1' }}</span>{{ profile.user.username|capfirst }}
+                                    </a>
+                                </td>
+                                <td class="num">{{ profile.games|insertCommas }}</td>
+                                <td class="num">{{ profile.tests|insertCommas }}</td>
+                                <td>{{ profile.engine|default:"—" }}</td>
+                                <td>
+                                    {% if profile.approver %}<span class="badge info">Approver</span>{% endif %}
+                                    {% if not profile.enabled %}<span class="badge fail">Disabled</span>{% endif %}
+                                </td>
+                                <td class="muted"><span class="datestamp">{{ profile.user.date_joined|date:'U' }}</span></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
 {% endblock %}

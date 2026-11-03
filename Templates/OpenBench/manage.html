@@ -1,14 +1,28 @@
 {% extends "OpenBench/base.html" %}
 
+{% block title %}Manage · OpenBench{% endblock %}
+
 {% block content %}
 
-    <!-- Tabs for each section of /manage/. Split evenly as more are added -->
-    <div class="anchor-container mb-4">
-        <a class="anchorbutton btn-start" href="/manage/books/">Books</a>
-        <a class="anchorbutton btn-start" href="/manage/engines/">Engines</a>
+    <div class="page-header">
+        <div>
+            <h1>Manage</h1>
+            <div class="subtitle">{% if can_manage %}Server configuration{% else %}Read-only: only superusers can make changes{% endif %}</div>
+        </div>
+        {% if can_manage %}
+            {% if request.path == '/manage/engines/' %}
+                <a class="btn btn-primary" href="/manage/engines/new/"><i class="fa-solid fa-plus"></i> New engine</a>
+            {% elif request.path == '/manage/books/' %}
+                <a class="btn btn-primary" href="/manage/books/new/"><i class="fa-solid fa-plus"></i> New book</a>
+            {% endif %}
+        {% endif %}
     </div>
 
-    {% block manage %}
-    {% endblock %}
+    <nav class="tabs">
+        <a href="/manage/engines/" class="{% if '/manage/engines' in request.path %}active{% endif %}"><i class="fa-solid fa-chess-knight"></i> Engines</a>
+        <a href="/manage/books/" class="{% if '/manage/books' in request.path %}active{% endif %}"><i class="fa-solid fa-book"></i> Books</a>
+    </nav>
+
+    {% block manage %}{% endblock %}
 
 {% endblock %}

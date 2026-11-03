@@ -2,42 +2,64 @@
 
 {% load mytags %}
 
+{% block title %}Machines · OpenBench{% endblock %}
+
+{% block main_attrs %}data-live-interval="15000"{% endblock %}
+
 {% block content %}
 
-    <table class="hoverable">
+    <div class="page-header">
+        <div>
+            <h1>Machines</h1>
+            <div class="subtitle">Workers seen during the last two minutes</div>
+        </div>
+        <span class="live-indicator" id="live-indicator"><span class="pulse"></span><span class="live-label">Live</span></span>
+    </div>
 
-        <tr class="table-header">
-            <th>#</th>
-            <th>User</th>
-            <th>Name</th>
-            <th>System</th>
-            <th>ISA</th>
-            <th>Workload</th>
-            <th>Threads</th>
-            <th>NPS</th>
-        </tr>
-
-        {% for machine in machines %}
-            <tr>
-                <td class="numeric"><a href="/machines/{{machine.id}}/">{{machine.id}}</a></td>
-                <td>{{machine.user.username|capfirst}}</td>
-                <td>{{machine.info.machine_name}}</td>
-                <td>{{machine.info.os_name}}</td>
-                <td>{{machine.info.isa_name}}</td>
-                <td>
-                    {% if machine.workload %}
-                        <a href="{{machine.workload|workload_url}}">
-                            {{machine.workload|workload_pretty_name}}
-                        </a>
-                    {% else %}
-                        None
-                    {% endif %}
-                </td>
-                <td class="numeric">{{machine.info.concurrency}}</td>
-                <td class="numeric">{{machine.dev_mnps|twoDigitPrecision}}M / {{machine.base_mnps|twoDigitPrecision}}M</td>
-            </tr>
-        {% endfor %}
-
-    </table>
+    <section class="card" id="machines-live" data-live>
+        <div class="card-header">
+            <h2>Online <span class="count">{{ machines|length }}</span></h2>
+        </div>
+        {% if machines %}
+            <div class="table-wrap">
+                <table class="table" id="machines-table" data-sortable>
+                    <thead>
+                        <tr>
+                            <th data-sort="num">#</th>
+                            <th data-sort="text">User</th>
+                            <th data-sort="text">Name</th>
+                            <th data-sort="text">System</th>
+                            <th data-sort="text">ISA</th>
+                            <th data-sort="text">Workload</th>
+                            <th class="num" data-sort="num">Threads</th>
+                            <th class="num" data-sort="num">MNPS (dev / base)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for machine in machines %}
+                            <tr>
+                                <td><a href="/machines/{{ machine.id }}/">{{ machine.id }}</a></td>
+                                <td>{{ machine.user.username|capfirst }}</td>
+                                <td>{{ machine.info.machine_name }}</td>
+                                <td class="muted">{{ machine.info.os_name }}</td>
+                                <td class="mono">{{ machine.info.isa_name }}</td>
+                                <td data-sort="{% if machine.workload %}{{ machine.workload|workload_pretty_name }}{% endif %}">
+                                    {% if machine.workload %}
+                                        <a href="{{ machine.workload|workload_url }}">{{ machine.workload|workload_pretty_name }}</a>
+                                    {% else %}
+                                        <span class="faint">Idle</span>
+                                    {% endif %}
+                                </td>
+                                <td class="num">{{ machine.info.concurrency }}</td>
+                                <td class="num" data-sort="{{ machine.dev_mnps }}">{{ machine.dev_mnps|twoDigitPrecision }} / {{ machine.base_mnps|twoDigitPrecision }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty"><i class="fa-solid fa-plug-circle-xmark"></i>No machine connected right now</div>
+        {% endif %}
+    </section>
 
 {% endblock %}

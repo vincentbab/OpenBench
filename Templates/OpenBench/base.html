@@ -1,213 +1,92 @@
 <!DOCTYPE html>
-
+{% load static %}
 <html lang="en">
-
-    {% load static %}
-
     <head>
+        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}?{{ static_version }}">
-        <link rel="stylesheet" href="{% static 'style.css' %}?{{ static_version }}">
-        <link rel="stylesheet" href="{% static 'base.css' %}?{{ static_version }}">
-        <link rel="stylesheet" href="{% static 'form.css' %}?{{ static_version }}">
-        <link rel="stylesheet" href="{% static 'paging.css' %}?{{ static_version }}">
-
-        <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css' rel='stylesheet'>
-
-        <link rel="preconnect" href="https://fonts.gstatic.com">
-        <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
-
-        <title>{% block title %}OpenBench{% endblock %}</title>
-
-        {% block scripts %}
-        {% endblock %}
-
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-
-                {
-                    var timestamps = document.getElementsByClassName('timestamp');
-
-                    var options = {
-                        year   : 'numeric', month  : '2-digit',
-                        day    : '2-digit', hour   : '2-digit',
-                        minute : '2-digit', second : '2-digit',
-                        hour12 : false,
-                    };
-
-                    for (var i = 0; i < timestamps.length; i++) {
-                        var date = new Date(1000 * timestamps[i].textContent);
-                        timestamps[i].textContent = date.toLocaleString(undefined, options);
-                    }
-                }
-
-                {
-                    var datestamps = document.getElementsByClassName('datestamp');
-
-                    var options = {
-                        month  : 'short',
-                        day    : '2-digit',
-                    };
-
-                    for (var i = 0; i < datestamps.length; i++) {
-                        var date = new Date(1000 * datestamps[i].textContent);
-                        datestamps[i].textContent = date.toLocaleString(undefined, options);
-                    }
-                }
-
-                {
-                    const cells = document.querySelectorAll('.engine-options');
-
-                    cells.forEach(cell => {
-
-                        // Only have Threads= and Hash= settings
-                        if (cell.textContent.split(/\s+/).length <= 2)
-                            return;
-
-                        // Only display Threads=X Hash=X ...
-                        const re_threads = cell.textContent.match(/Threads=\d+/)[0];
-                        const re_hash    = cell.textContent.match(/Hash=\d+/)[0];
-                        const new_text   = re_threads + ' ' + re_hash + ' ...'
-
-                        // Add all options into the popup text
-                        const popup = document.createElement('div');
-                        popup.classList.add('engine-options-popup');
-                        popup.innerHTML = cell.textContent.trim().replace(/\s+/g, '<br>');
-
-                        // Prune text, and append popup
-                        cell.textContent = new_text;
-                        cell.appendChild(popup);
-                    });
-                }
-
-            }, false);
-
-            document.addEventListener('submit', event => {
-
-                // Prevent duplicate <form> submissions
-                const form = event.target;
-                if (form.dataset.submitting) {
-                    event.preventDefault();
-                    return;
-                }
-
-                form.dataset.submitting = true;
-            }, true);
-
-            window.addEventListener('pageshow', event => {
-                if (event.persisted) {
-                    document
-                        .querySelectorAll('form[data-submitting]')
-                        .forEach(form => delete form.dataset.submitting);
-                }
-            });
-
-            function toggle_sidebar() {
-                document.body.classList.toggle('sidebar-open')
-            }
+            try { const t = localStorage.getItem('ob-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
         </script>
+        <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}?{{ static_version }}">
+        <link rel="stylesheet" href="{% static 'app.css' %}?{{ static_version }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        <title>{% block title %}OpenBench{% endblock %}</title>
+        {% block head %}{% endblock %}
     </head>
 
     <body>
+        {% block body %}
 
-        <div id="sidebar">
+        <nav class="navbar">
+            {% if user.is_authenticated %}
+                <button class="btn btn-ghost btn-icon nav-burger" id="nav-burger" title="Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            {% endif %}
+            <a class="brand" href="/">
+                <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                <span>OpenBench</span>
+            </a>
 
-            <ul>
-                <li class="header">Admin</li>
-                {% if user.is_authenticated %}
-                    <li><a href="/logout/"><i class="fa-solid fa-right-from-bracket fa-fw"></i> Logout</a></li>
-                    <li><a href="/profile/"><i class="fa-solid fa-user fa-fw"></i> Profile</a></li>
-                {% else %}
-                    <li><a href="/login"><i class="fa-solid fa-right-to-bracket fa-fw"></i> Login</a></li>
-                    <li><a href="/register"><i class="fa-solid fa-registered fa-fw"></i> Register</a></li>
-                {% endif %}
-                <li><a href="/manage"><i class="fa-solid fa-sliders fa-fw"></i> Manage</a></li>
-            </ul>
+            {% if user.is_authenticated %}
 
-            <hr>
+                <div class="nav-spacer"></div>
 
-            <ul>
-                <li class="header">Tests</li>
-                <li><a href="/index"><i class="fa-solid fa-house fa-fw"></i> Index</a></li>
-                <li><a href="/greens"><i class="fa-solid fa-heart fa-fw"></i> Greens</a></li>
-                <li><a href="/search"><i class="fa-solid fa-magnifying-glass fa-fw"></i> Search</a></li>
-            </ul>
+                <form class="nav-search" id="nav-search" method="GET" action="/search/" role="search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input name="keywords" placeholder="Search branches or #id" autocomplete="off" value="{% if request.path == '/search/' %}{{ request.GET.keywords }}{% endif %}">
+                    <kbd>/</kbd>
+                </form>
 
-            <hr>
+                <button class="btn btn-ghost btn-icon" id="theme-toggle" title="Toggle theme">
+                    <i class="fa-solid fa-circle-half-stroke"></i>
+                </button>
 
-            <ul>
-                <li class="header">Actions</li>
-                <li><a href="/test/new/"><i class="fa-solid fa-plus fa-fw"></i> Create Test</a></li>
-                <li><a href="/tune/new/"><i class="fa-solid fa-vial fa-fw"></i> Create Tune</a></li>
-                <li><a href="/datagen/new/"><i class="fa-solid fa-database fa-fw"></i> Create Datagen</a></li>
-                <li><a href="/newNetwork"><i class="fa-solid fa-upload fa-fw"></i> Upload Net</a></li>
-            </ul>
-
-            <hr>
-
-            <ul>
-                <li class="header">Info</li>
-                <li><a href="/users"><i class="fa-solid fa-users fa-fw"></i> Users</a></li>
-                <li><a href="/events"><i class="fa-solid fa-circle-exclamation fa-fw"></i> Events</a></li>
-                <li><a href="/errors"><i class="fa-solid fa-exclamation-triangle fa-fw"></i> Errors</a></li>
-                <li><a href="/machines"><i class="fa-solid fa-microchip fa-fw"></i> Machines</a></li>
-                <li><a href="/networks"><i class="fa-solid fa-circle-nodes fa-fw"></i> Networks</a></li>
-            </ul>
-
-            <hr>
-
-            <ul>
-                <li class="header">Support</li>
-                <li><a href="{{config.client_repo_url}}"><i class="fa-brands fa-github fa-fw"></i> OpenBench</a></li>
-                <li><a href="https://discord.gg/9MVg7fBTpM"><i class="fa-brands fa-discord fa-fw"></i> Discord</a></li>
-            </ul>
-
-            <hr>
-
-            <ul>
-                <li class="header">Engines</li>
-                {% for engine in engines %}
-                    <li><a href="{{engine.source}}">{{engine.name}}</a></li>
-                {% endfor %}
-            </ul>
-
-            <hr>
-
-        </div>
-
-        <div id="content-parent">
-            <div id="content" class="pb-5">
-                <div id="content-header">
-                    <button id="sidebar-toggle" onclick="toggle_sidebar()">
-                        <i class="fa-solid fa-bars fa-fw"></i>
+                <div class="dropdown right">
+                    <button class="nav-trigger" data-dropdown>
+                        <span class="avatar">{{ user.username|slice:':1' }}</span>
+                        <span class="nav-username">{{ user.username|capfirst }}</span>
+                        <i class="fa-solid fa-chevron-down"></i>
                     </button>
-                    <h2>
-                        <a class="site-title" href="/">OpenBench&nbsp;Testing&nbsp;Framework</a>
-                    </h2>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-header">Signed in as {{ user.username }}</div>
+                        <a href="/user/{{ user.username }}/"><i class="fa-solid fa-list-check"></i> My tests</a>
+                        <a href="/profile/"><i class="fa-solid fa-user"></i> Profile</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ config.client_repo_url }}"><i class="fa-brands fa-github"></i> Source code</a>
+                        <a href="/logout/"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                    </div>
                 </div>
 
-                {% if request.session.error_message %}
-                    <div class="error-message">
-                        <pre>{{request.session.error_message}}</pre>
-                    </div>
+            {% else %}
+
+                <div class="nav-spacer"></div>
+                <a class="btn btn-ghost" href="/login/">Log in</a>
+                {% if not config.require_manual_registration %}
+                    <a class="btn btn-primary" href="/register/">Register</a>
                 {% endif %}
 
-                {% if request.session.warning_message %}
-                    <div class="warning-message">
-                        <pre>{{request.session.warning_message}}</pre>
-                    </div>
-                {% endif %}
+            {% endif %}
+        </nav>
 
-                {% if request.session.status_message %}
-                    <div class="status-message">
-                        <pre>{{request.session.status_message}}</pre>
-                    </div>
-                {% endif %}
+        <div class="layout {% if user.is_authenticated %}with-sidebar{% endif %}">
 
-                {% block content %}
-                {% endblock %}
-            </div>
+            {% if user.is_authenticated %}
+                {% include "OpenBench/Blocks/sidebar.html" %}
+            {% endif %}
+
+            <main class="page {% block page_class %}{% endblock %}" {% block main_attrs %}{% endblock %}>
+
+                {% include "OpenBench/Blocks/alerts.html" %}
+
+                {% block content %}{% endblock %}
+
+            </main>
         </div>
+
+        {% endblock %}
+
+        <script src="{% static 'app.js' %}?{{ static_version }}"></script>
+        {% block scripts %}{% endblock %}
     </body>
 </html>

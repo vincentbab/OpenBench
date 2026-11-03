@@ -90,6 +90,28 @@ def shortStatBlock(test):
 
     return '\n'.join(statlines)
 
+def listStatBlock(test):
+
+    if test.test_mode == 'SPSA':
+        return shortStatBlock(test)
+
+    lower, elo, upper = OpenBench.stats.Elo(test.results())
+    elo_line  = 'Elo: %0.2f +- %0.2f (95%%)' % (elo, max(upper - elo, elo - lower))
+    tri_line  = 'Games: %d W: %d L: %d D: %d' % test.as_nwld()
+
+    if test.test_mode == 'SPRT':
+        llr_line = 'LLR: %0.2f (%0.2f, %0.2f) [%0.2f, %0.2f]' % (
+            test.currentllr, test.lowerllr, test.upperllr, test.elolower, test.eloupper)
+        return '\n'.join([elo_line, llr_line, tri_line])
+
+    if test.test_mode == 'DATAGEN':
+        return '\n'.join([elo_line, 'Generated %d/%d Games' % (test.games, test.max_games)])
+
+    return '\n'.join([elo_line + ' [N=%d]' % (test.max_games), tri_line])
+
+def copyStatBlock(test):
+    return shortStatBlock(test) if test.test_mode == 'SPSA' else longStatBlock(test)
+
 def longStatBlock(test):
 
     assert test.test_mode != 'SPSA'
@@ -210,6 +232,8 @@ register.filter('twoDigitPrecision', twoDigitPrecision)
 register.filter('gitDiffLink', gitDiffLink)
 register.filter('shortStatBlock', shortStatBlock)
 register.filter('longStatBlock', longStatBlock)
+register.filter('listStatBlock', listStatBlock)
+register.filter('copyStatBlock', copyStatBlock)
 register.filter('testResultColour', testResultColour)
 register.filter('sumAttributes', sumAttributes)
 register.filter('insertCommas', insertCommas)
@@ -295,6 +319,61 @@ register.filter('test_is_smp_odds'  , test_is_smp_odds  )
 register.filter('test_is_time_odds' , test_is_time_odds )
 register.filter('test_is_fischer'   , test_is_fischer   )
 
+
+@register.filter
+def workload_state(test):
+
+    if test.deleted:
+        return { 'label' : 'Deleted', 'cls' : 'fail', 'icon' : 'fa-trash-can' }
+
+    if not test.finished and not test.approved:
+        return { 'label' : 'Pending approval', 'cls' : 'warn', 'icon' : 'fa-hourglass-half' }
+
+    if not test.finished:
+        return { 'label' : 'Running', 'cls' : 'run', 'icon' : None }
+
+    colour = testResultColour(test)
+
+    if test.passed:
+        return { 'label' : 'Passed', 'cls' : 'info' if colour == 'blue' else 'pass', 'icon' : 'fa-circle-check' }
+
+    if test.failed:
+        return { 'label' : 'Failed', 'cls' : 'warn' if colour == 'yellow' else 'fail', 'icon' : 'fa-circle-xmark' }
+
+    return { 'label' : 'Stopped', 'cls' : '', 'icon' : 'fa-circle-stop' }
+
+@register.filter
+def workload_progress(test):
+
+    try:
+        if test.test_mode == 'SPRT':
+            span = test.upperllr - test.lowerllr
+            value = 100.0 * (test.currentllr - test.lowerllr) / span
+
+        elif test.test_mode in ('GAMES', 'DATAGEN'):
+            value = 100.0 * test.games / test.max_games
+
+        elif test.test_mode == 'SPSA':
+            spsa_run = test.spsa_run
+            value = 100.0 * test.games / (2 * spsa_run.iterations * spsa_run.pairs_per)
+
+        else:
+            return None
+
+    except (ZeroDivisionError, AttributeError, TypeError):
+        return None
+
+    return round(min(100.0, max(0.0, value)), 1)
+
+@register.filter
+def elo_estimate(test):
+    lower, elo, upper = OpenBench.stats.Elo(test.results())
+    return { 'elo' : elo, 'error' : max(upper - elo, elo - lower), 'lower' : lower, 'upper' : upper }
+
+@register.filter
+def spsa_iterations(test):
+    spsa_run = test.spsa_run
+    return { 'done' : int(test.games / (2 * spsa_run.pairs_per)), 'total' : spsa_run.iterations, 'params' : spsa_run.parameters.count() }
 
 @register.filter
 def next(iterable, index):

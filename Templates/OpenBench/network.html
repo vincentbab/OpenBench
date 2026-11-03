@@ -1,67 +1,58 @@
 {% extends "OpenBench/base.html" %}
 
-{% load static %}
+{% block title %}{{ network.name }} · OpenBench{% endblock %}
+
+{% block page_class %}narrow{% endblock %}
 
 {% block content %}
 
-    <form method="POST" action="/networks/{{network.engine}}/EDIT/{{network.sha256}}/">
+    <div class="page-header">
+        <div>
+            <h1>{{ network.name }}</h1>
+            <div class="subtitle">{{ network.engine }} network uploaded by {{ network.author|capfirst }}</div>
+        </div>
+        <div class="page-actions">
+            <a class="btn" href="/networks/{{ network.engine }}/DOWNLOAD/{{ network.sha256 }}/"><i class="fa-solid fa-download"></i> Download</a>
+            <a class="btn" href="/networks/"><i class="fa-solid fa-arrow-left"></i> Networks</a>
+        </div>
+    </div>
+
+    <form method="POST" action="/networks/{{ network.engine }}/EDIT/{{ network.sha256 }}/" class="card">
         {% csrf_token %}
-        <div class="form">
-            <div class="col">
-
-                <div class="row">
-                    <label for="hash"> Hash </label>
-                    <input id="hash" readonly value="{{network.sha256}}">
-                </div>
-
-                <div class="row">
-                    <label for="engine"> Engine </label>
-                    <input id="engine" readonly value="{{network.engine}}">
-                </div>
-
-                <div class="row">
-                    <label for="author"> Author </label>
-                    <input id="author" readonly value="{{network.author}}">
-                </div>
-
-                <div class="row">
-                    <label for="created"> Created </label>
-                    <input id="created" readonly value="{{network.created}}">
-                </div>
-
-                <div class="row">
-                    <label for="name"> Name </label>
-                    <input id="name" name="name" value="{{network.name}}">
-                </div>
-
-                <div class="row">
-                    <label for="default"> Default </label>
-                    <select id="default" name="default">
-                        {% if network.default %}
-                            <option selected value="TRUE"> True </option>
-                            <option value="FALSE"> False </option>
-                        {% else %}
-                            <option value="TRUE"> True </option>
-                            <option selected value="FALSE"> False </option>
-                        {% endif %}
-                    <select>
-                </div>
-
-                <div class="row">
-                    <label for="was_default"> Was Default </label>
-                    <select id="was_default" name="was_default">
-                        {% if network.was_default %}
-                            <option selected value="TRUE"> True </option>
-                            <option value="FALSE"> False </option>
-                        {% else %}
-                            <option value="TRUE"> True </option>
-                            <option selected value="FALSE"> False </option>
-                        {% endif %}
-                    <select>
-                </div>
-
-                <input class="anchorbutton btn-blue w-100" type="submit" value="Update Network">
+        <div class="card-body form-grid">
+            <div class="field span-all">
+                <label for="hash">SHA-256</label>
+                <input id="hash" readonly value="{{ network.sha256 }}" class="mono">
             </div>
+            <div class="field">
+                <label for="engine">Engine</label>
+                <input id="engine" readonly value="{{ network.engine }}">
+            </div>
+            <div class="field">
+                <label for="created">Uploaded</label>
+                <input id="created" readonly value="{{ network.created|date:'Y-m-d H:i' }}">
+            </div>
+            <div class="field span-all">
+                <label for="name">Name</label>
+                <input id="name" name="name" value="{{ network.name }}" required>
+            </div>
+            <div class="field">
+                <label for="default">Default</label>
+                <select id="default" name="default">
+                    <option value="TRUE" {% if network.default %}selected{% endif %}>Yes</option>
+                    <option value="FALSE" {% if not network.default %}selected{% endif %}>No</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="was_default">Previously default</label>
+                <select id="was_default" name="was_default">
+                    <option value="TRUE" {% if network.was_default %}selected{% endif %}>Yes</option>
+                    <option value="FALSE" {% if not network.was_default %}selected{% endif %}>No</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-footer" style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save</button>
         </div>
     </form>
 

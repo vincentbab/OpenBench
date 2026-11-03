@@ -1,0 +1,25 @@
+{% if request.session.error_message or request.session.warning_message or request.session.status_message %}
+    <div class="alerts">
+        {% if request.session.error_message %}
+            <div class="alert error" role="alert">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <pre>{{ request.session.error_message }}</pre>
+                <button class="alert-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        {% endif %}
+        {% if request.session.warning_message %}
+            <div class="alert warning" role="alert">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <pre>{{ request.session.warning_message }}</pre>
+                <button class="alert-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        {% endif %}
+        {% if request.session.status_message %}
+            <div class="alert status" role="status">
+                <i class="fa-solid fa-circle-check"></i>
+                <pre>{{ request.session.status_message }}</pre>
+                <button class="alert-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
