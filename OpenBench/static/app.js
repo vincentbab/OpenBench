@@ -243,23 +243,28 @@
         });
     }
 
+    function live_signature(html) {
+        return html.replace(/<input[^>]*csrfmiddlewaretoken[^>]*>/g, '');
+    }
+
     function setup_live() {
 
         const main = document.querySelector('main[data-live-interval]');
         if (!main || !document.querySelector('[data-live]')) return;
 
         const interval = parseInt(main.dataset.liveInterval, 10) || 10000;
-        const indicator = document.getElementById('live-indicator');
-        const label = indicator ? indicator.querySelector('.live-label') : null;
 
         let timer = null;
         let stopped = false;
-        let last = Date.now();
         let inflight = false;
+        let state = { paused: false, text: 'Live' };
 
         function set_state(paused, text) {
+            state = { paused, text };
+            const indicator = document.getElementById('live-indicator');
             if (!indicator) return;
             indicator.classList.toggle('paused', paused);
+            const label = indicator.querySelector('.live-label');
             if (label) label.textContent = text;
         }
 
@@ -283,11 +288,12 @@
                     const fresh = doc.getElementById(region.id);
                     if (!fresh) return;
                     if (region.contains(document.activeElement) && document.activeElement !== document.body) return;
-                    if (region.dataset.liveHtml === fresh.innerHTML) return;
+                    if (region.dataset.liveHtml === live_signature(fresh.innerHTML)) return;
 
-                    region.dataset.liveHtml = fresh.innerHTML;
+                    region.dataset.liveHtml = live_signature(fresh.innerHTML);
                     region.innerHTML = fresh.innerHTML;
                     OB.hydrate(region);
+                    set_state(state.paused, state.text);
                     region.classList.remove('is-updated');
                     void region.offsetWidth;
                     region.classList.add('is-updated');
@@ -295,7 +301,7 @@
 
                 if (doc.title) document.title = doc.title;
 
-                last = Date.now();
+                set_state(false, 'Live');
                 document.dispatchEvent(new CustomEvent('live:updated'));
 
                 const fresh_main = doc.querySelector('main');
@@ -312,19 +318,12 @@
             }
         }
 
-        function tick_label() {
-            if (stopped || document.hidden) return;
-            const age = Math.round((Date.now() - last) / 1000);
-            set_state(false, age < 2 ? 'Live' : 'Live · ' + age + 's');
-        }
-
         function start() {
             if (stopped) return;
             clearInterval(timer);
             timer = setInterval(refresh, interval);
         }
 
-        document.querySelectorAll('[data-live]').forEach(region => region.dataset.liveHtml = region.innerHTML);
 
         document.addEventListener('visibilitychange', () => {
             if (stopped) return;
@@ -337,7 +336,6 @@
             }
         });
 
-        setInterval(tick_label, 1000);
         set_state(false, 'Live');
         start();
 
@@ -345,6 +343,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-live]').forEach(region => region.dataset.liveHtml = live_signature(region.innerHTML));
         OB.hydrate(document);
         setup_theme();
         setup_dropdowns();

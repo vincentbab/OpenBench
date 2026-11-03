@@ -83,11 +83,12 @@
                                 <div class="label">Games</div>
                                 <div class="value">{{ workload.games|insertCommas }}</div>
                                 <div class="sub">W {{ workload.wins }} · L {{ workload.losses }} · D {{ workload.draws }}</div>
+                                {% include "OpenBench/Blocks/pentaline.html" %}
                             </div>
                             <div class="stat-tile">
                                 <div class="label">Parameters</div>
                                 <div class="value">{{ it.params }}</div>
-                                <div class="sub">{{ workload.spsa_run.reporting_type|capfirst }} · {{ workload.spsa_run.distribution_type|capfirst }}</div>
+                                <div class="sub">{{ workload.spsa_run.reporting_type|lower|capfirst }} · {{ workload.spsa_run.distribution_type|lower|capfirst }}</div>
                             </div>
                         {% endwith %}
                     {% else %}
@@ -113,34 +114,23 @@
                             <div class="label">Games</div>
                             <div class="value">{{ workload.games|insertCommas }}</div>
                             <div class="sub">W {{ workload.wins }} · L {{ workload.losses }} · D {{ workload.draws }}</div>
+                            {% include "OpenBench/Blocks/pentaline.html" %}
                         </div>
                     {% endif %}
                 </div>
 
-                <div class="card-body stack" style="gap: 16px;">
-                    {% if progress is not None %}
-                        <div>
-                            {% if workload.test_mode == "SPRT" %}
-                                <div class="progress lg {% if workload.currentllr >= 0 %}pos{% else %}neg{% endif %}" title="{{ progress }}%">
-                                    <span style="width: {{ progress|stringformat:'.1f' }}%"></span><i class="mid"></i>
-                                </div>
-                                <div class="llr-scale"><span>{{ workload.lowerllr|stringformat:'.2f' }}</span><span>0</span><span>{{ workload.upperllr|stringformat:'.2f' }}</span></div>
-                            {% else %}
-                                <div class="progress lg" title="{{ progress }}%"><span style="width: {{ progress|stringformat:'.1f' }}%"></span></div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    {% if workload.use_penta and workload.games %}
-                        <div class="penta">
-                            <div><span class="k">0</span><span class="v">{{ workload.LL|insertCommas }}</span></div>
-                            <div><span class="k">½</span><span class="v">{{ workload.LD|insertCommas }}</span></div>
-                            <div><span class="k">1</span><span class="v">{{ workload.DD|insertCommas }}</span></div>
-                            <div><span class="k">1½</span><span class="v">{{ workload.DW|insertCommas }}</span></div>
-                            <div><span class="k">2</span><span class="v">{{ workload.WW|insertCommas }}</span></div>
-                        </div>
-                    {% endif %}
-                </div>
+                {% if progress is not None %}
+                    <div class="card-body">
+                        {% if workload.test_mode == "SPRT" %}
+                            <div class="progress lg {% if workload.currentllr >= 0 %}pos{% else %}neg{% endif %}" title="{{ progress }}%">
+                                <span style="width: {{ progress|stringformat:'.1f' }}%"></span><i class="mid"></i>
+                            </div>
+                            <div class="llr-scale"><span>{{ workload.lowerllr|stringformat:'.2f' }}</span><span>0</span><span>{{ workload.upperllr|stringformat:'.2f' }}</span></div>
+                        {% else %}
+                            <div class="progress lg" title="{{ progress }}%"><span style="width: {{ progress|stringformat:'.1f' }}%"></span></div>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </section>
 
             {% if workload.test_mode == "SPRT" or workload.test_mode == "GAMES" %}
@@ -403,30 +393,49 @@
             <section class="card">
                 <div class="card-header"><h2><i class="fa-solid fa-list"></i> Configuration</h2></div>
                 <dl class="kv">
-                    <dt>Opening book</dt>
-                    <dd>{% if workload|book_download_link %}<a href="{{ workload|book_download_link }}">{{ workload.book_name }}</a>{% else %}{{ workload.book_name }}{% endif %}</dd>
-                    <dt>Upload PGNs</dt><dd>{{ workload.upload_pgns|capfirst }}</dd>
-                    <dt>Syzygy WDL</dt><dd>{{ workload.syzygy_wdl }}</dd>
-                    <dt>Syzygy adj.</dt><dd>{{ workload.syzygy_adj }}</dd>
-                    <dt>Win adj.</dt><dd class="mono">{{ workload.win_adj }}</dd>
-                    <dt>Draw adj.</dt><dd class="mono">{{ workload.draw_adj }}</dd>
-                    <dt>Scaling</dt><dd>{{ workload.scale_method }} · {{ workload.scale_nps|insertCommas }} NPS</dd>
-                    {% if workload.test_mode == "GAMES" %}
+                    {% if workload.test_mode == "SPRT" %}
+                        <dt class="kv-section">SPRT</dt><dd class="kv-section"></dd>
+                        <dt>Elo bounds</dt><dd class="mono">[{{ workload.elolower|stringformat:'.2f' }}, {{ workload.eloupper|stringformat:'.2f' }}]</dd>
+                        <dt>Confidence</dt><dd class="mono">α {{ workload.alpha }} · β {{ workload.beta }}</dd>
+                        <dt>LLR bounds</dt><dd class="mono">({{ workload.lowerllr|stringformat:'.2f' }}, {{ workload.upperllr|stringformat:'.2f' }})</dd>
+                        <dt>Statistics</dt><dd>{% if workload.use_penta %}Pentanomial{% else %}Trinomial{% endif %}</dd>
+                    {% elif workload.test_mode == "GAMES" %}
+                        <dt class="kv-section">Fixed games</dt><dd class="kv-section"></dd>
                         <dt>Max games</dt><dd>{{ workload.max_games|insertCommas }}</dd>
-                    {% endif %}
-                    {% if type == "TUNE" %}
+                        <dt>Statistics</dt><dd>{% if workload.use_penta %}Pentanomial{% else %}Trinomial{% endif %}</dd>
+                    {% elif type == "TUNE" %}
+                        <dt class="kv-section">SPSA</dt><dd class="kv-section"></dd>
+                        <dt>Iterations</dt><dd>{{ workload.spsa_run.iterations|insertCommas }}</dd>
+                        <dt>Pairs per point</dt><dd>{{ workload.spsa_run.pairs_per }}</dd>
                         <dt>Alpha</dt><dd>{{ workload.spsa_run.alpha }}</dd>
                         <dt>Gamma</dt><dd>{{ workload.spsa_run.gamma }}</dd>
                         <dt>A-ratio</dt><dd>{{ workload.spsa_run.a_ratio }}</dd>
-                        <dt>Reporting</dt><dd>{{ workload.spsa_run.reporting_type }}</dd>
-                        <dt>Distribution</dt><dd>{{ workload.spsa_run.distribution_type }}</dd>
-                        <dt>Pairs per point</dt><dd>{{ workload.workload_size }}</dd>
+                        <dt>Reporting</dt><dd>{{ workload.spsa_run.reporting_type|lower|capfirst }}</dd>
+                        <dt>Distribution</dt><dd>{{ workload.spsa_run.distribution_type|lower|capfirst }}</dd>
                     {% elif type == "DATAGEN" %}
+                        <dt class="kv-section">Datagen</dt><dd class="kv-section"></dd>
                         <dt>Max games</dt><dd>{{ workload.max_games|insertCommas }}</dd>
                         <dt>Genfens args</dt><dd class="mono">{{ workload.genfens_args|default:"—" }}</dd>
                         <dt>Play reverses</dt><dd>{{ workload.play_reverses|yesno:"Yes,No" }}</dd>
                     {% endif %}
+
+                    <dt class="kv-section">Games</dt><dd class="kv-section"></dd>
+                    <dt>Opening book</dt>
+                    <dd>{% if workload|book_download_link %}<a href="{{ workload|book_download_link }}">{{ workload.book_name }}</a>{% else %}{{ workload.book_name }}{% endif %}</dd>
+                    <dt>Book position</dt><dd>{{ workload.book_index|insertCommas }}</dd>
+                    <dt>Upload PGNs</dt><dd>{{ workload.upload_pgns|lower|capfirst }}</dd>
+                    <dt>Scaling</dt><dd>{{ workload.scale_method|lower|capfirst }} · {{ workload.scale_nps|insertCommas }} NPS</dd>
+
+                    <dt class="kv-section">Adjudication</dt><dd class="kv-section"></dd>
+                    <dt>Syzygy WDL</dt><dd>{{ workload.syzygy_wdl|lower|capfirst }}</dd>
+                    <dt>Syzygy adj.</dt><dd>{{ workload.syzygy_adj|lower|capfirst }}</dd>
+                    <dt>Win adj.</dt><dd class="mono">{{ workload.win_adj }}</dd>
+                    <dt>Draw adj.</dt><dd class="mono">{{ workload.draw_adj }}</dd>
+
+                    <dt class="kv-section">Status</dt><dd class="kv-section"></dd>
+                    <dt>Approved</dt><dd>{{ workload.approved|yesno:"Yes,No" }}</dd>
                     <dt>Created</dt><dd><span class="timestamp">{{ workload.creation|date:'U' }}</span></dd>
+                    <dt>Last update</dt><dd><span class="timestamp">{{ workload.updated|date:'U' }}</span></dd>
                 </dl>
             </section>
 
