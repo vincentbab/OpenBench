@@ -37,7 +37,8 @@
                         </div>
                         <div class="field">
                             <label for="password1">{% if creating %}Password{% else %}New password{% endif %}</label>
-                            <input id="password1" name="password1" type="password" autocomplete="new-password" {% if creating %}required{% else %}placeholder="Leave empty to keep"{% endif %}>
+                            <input id="password1" name="password1" type="password" autocomplete="new-password" minlength="8" {% if creating %}required{% else %}placeholder="Leave empty to keep"{% endif %}>
+                            <span class="hint">At least 8 characters, with upper and lower case letters</span>
                         </div>
                         <div class="field">
                             <label for="password2">Confirm password</label>

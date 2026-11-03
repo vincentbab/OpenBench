@@ -54,7 +54,10 @@
                         <a href="/profile/"><i class="fa-solid fa-user"></i> Profile</a>
                         <div class="dropdown-divider"></div>
                         <a href="{{ config.client_repo_url }}"><i class="fa-brands fa-github"></i> Source code</a>
-                        <a href="/logout/"><i class="fa-solid fa-right-from-bracket"></i> Log out</a>
+                        <form method="POST" action="/logout/">
+                            {% csrf_token %}
+                            <button type="submit"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
+                        </form>
                     </div>
                 </div>
 

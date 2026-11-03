@@ -27,7 +27,7 @@
                                     <td class="actions">
                                         <a class="btn btn-ghost btn-icon btn-sm" href="/manage/books/{{ book.name }}/" title="{% if can_manage %}Edit{% else %}View{% endif %}"><i class="fa-solid {% if can_manage %}fa-pen{% else %}fa-eye{% endif %}"></i></a>
                                         {% if can_manage %}
-                                            <a class="btn btn-ghost btn-icon btn-sm btn-danger" href="/manage/books/{{ book.name }}/delete/" data-confirm="Delete the {{ book.name }} book forever?" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
+                                            <form method="POST" action="/manage/books/{{ book.name }}/delete/" data-confirm="Delete the {{ book.name }} book forever?" style="display: inline;">{% csrf_token %}<button class="btn btn-ghost btn-icon btn-sm btn-danger" type="submit" title="Delete"><i class="fa-solid fa-trash-can"></i></button></form>
                                         {% endif %}
                                     </td>
                                 </tr>

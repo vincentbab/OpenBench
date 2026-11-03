@@ -22,3 +22,5 @@ Media/Events/*
 *.epd
 
 venv/*
+
+staticfiles/

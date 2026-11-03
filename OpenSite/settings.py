@@ -12,17 +12,45 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None or value.strip() == '':
+        return default
+    return value.strip().lower() in ('1', 'true', 'yes', 'on')
+
+def env_list(name, default):
+    value = os.environ.get(name)
+    if value is None or value.strip() == '':
+        return default
+    return [item.strip() for item in value.split(',') if item.strip()]
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = '@!zw2l8til1(0eb_nk+1w!(n78gqm&u)s)_v7#k6iseia@g9q0'
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', False)
 
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('The SECRET_KEY environment variable must be set when DJANGO_DEBUG is off')
+    SECRET_KEY = 'insecure-development-key-do-not-use-in-production'
+
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', ['*'] if DEBUG else ['localhost', '127.0.0.1', '[::1]'])
+
+CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS',
+    ['https://%s' % (host.lstrip('.')) for host in ALLOWED_HOSTS if host != '*' and not host.startswith('.')])
+
+if env_bool('DJANGO_SECURE_PROXY_SSL_HEADER', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SESSION_COOKIE_SECURE = env_bool('DJANGO_SECURE_COOKIES', env_bool('DJANGO_SECURE_PROXY_SSL_HEADER', False))
+CSRF_COOKIE_SECURE    = SESSION_COOKIE_SECURE
+
+SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '0') or 0)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
 
 HTML_MINIFY   = True
 APPEND_SLASH  = True
@@ -54,6 +82,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -102,16 +131,11 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': { 'min_length': 8 },
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'OpenBench.validators.MixedCaseValidator',
     },
 ]
 
@@ -133,4 +157,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL  = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STORAGES = {
+    'default'     : { 'BACKEND' : 'django.core.files.storage.FileSystemStorage' },
+    'staticfiles' : { 'BACKEND' : 'whitenoise.storage.CompressedManifestStaticFilesStorage' },
+}

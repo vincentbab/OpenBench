@@ -50,7 +50,10 @@ def modify_workload(request, id, action=None):
         return OpenBench.views.redirect(request, '/login/', error='Only users may modify Workloads')
 
     # Must be an approver, or interacting with their own workload
-    profile = Profile.objects.get(user=request.user)
+    profile = Profile.objects.filter(user=request.user).first()
+    if not (profile and profile.enabled):
+        return OpenBench.views.redirect(request, '/index/', error='Only enabled users may modify Workloads')
+
     if not profile.approver and workload.author != request.user.username:
         return OpenBench.views.redirect(request, '/index/', error='You cannot interact with another user\'s Workload')
 

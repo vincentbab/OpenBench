@@ -23,6 +23,8 @@ import csv, io, os, json, secrets
 import django.http
 import django.shortcuts
 import django.contrib.auth
+import django.contrib.auth.password_validation
+import django.core.exceptions
 
 import OpenBench.config
 import OpenBench.model_utils
@@ -46,6 +48,7 @@ from django.db import transaction
 from django.db.models import Count, F, Q
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import CsrfViewMiddleware
 from django.core.files.storage import FileSystemStorage
 from django.core.files.base import ContentFile
 from django.utils import timezone
@@ -78,6 +81,12 @@ def render(request, template, content={}, always_allow=False, error=None, warnin
     if OPENBENCH_CONFIG['require_login_to_view']:
         if not request.user.is_authenticated and not always_allow:
             return redirect(request, '/login/',  error=ERROR_MESSAGES['requires_login'])
+
+        if request.user.is_authenticated and not always_allow:
+            profile = Profile.objects.filter(user=request.user).first()
+            if not (profile and profile.enabled):
+                return django.shortcuts.render(request, 'OpenBench/pending.html', {
+                    'config' : OPENBENCH_CONFIG, 'static_version' : OPENBENCH_STATIC_VERSION }, status=403)
 
     if request.user.is_authenticated:
 
@@ -145,12 +154,19 @@ def authenticate(request, requireEnabled=False):
 #                            ADMINISTRATIVE VIEWS                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+def password_error(password, user=None):
+    try:
+        django.contrib.auth.password_validation.validate_password(password, user)
+    except django.core.exceptions.ValidationError as error:
+        return ' '.join(error.messages)
+
 def register(request):
 
-    if request.method == 'GET':
-        if not OPENBENCH_CONFIG['require_manual_registration']:
-            return render(request, 'register.html', always_allow=True)
+    if OPENBENCH_CONFIG['require_manual_registration']:
         return redirect(request, '/login/', error=ERROR_MESSAGES['manual_registration'])
+
+    if request.method == 'GET':
+        return render(request, 'register.html', always_allow=True)
 
     if request.POST['password1'] != request.POST['password2']:
         return redirect(request, '/register/', error='Passwords do not match')
@@ -160,6 +176,9 @@ def register(request):
 
     if User.objects.filter(username=request.POST['username']):
         return redirect(request, '/register/', error='That username is already taken')
+
+    if (error := password_error(request.POST['password1'], User(username=request.POST['username']))):
+        return redirect(request, '/register/', error=error)
 
     email    = request.POST['email']
     username = request.POST['username']
@@ -185,8 +204,11 @@ def login(request):
 
 def logout(request):
 
+    if request.method != 'POST':
+        return redirect(request, '/index/')
+
     django.contrib.auth.logout(request)
-    return redirect(request, '/index/', status='Logged out')
+    return redirect(request, '/login/', status='Logged out')
 
 def profile(request):
 
@@ -207,6 +229,9 @@ def profile(request):
 
     if request.POST['password1'] != request.POST['password2']:
         return redirect(request, '/profile/', status=changes_message, error='Passwords do not match')
+
+    if request.POST['password1'] and (error := password_error(request.POST['password1'], request.user)):
+        return redirect(request, '/profile/', status=changes_message, error=error)
 
     if request.POST['password1']:
         request.user.set_password(request.POST['password1'])
@@ -515,6 +540,8 @@ def machines(request, pk=None):
 def workload(request, workload_type, pk, action=None):
 
     if action != None:
+        if request.method != 'POST':
+            return redirect(request, '/%s/%d/' % (workload_type, int(pk)), error='Workload actions must be submitted from the page')
         return modify_workload(request, pk, action)
 
     if not (workload := Test.objects.select_related('spsa_run').filter(id=int(pk)).first()):
@@ -550,9 +577,17 @@ def networks(request, engine=None, action=None, name=None, client=False):
     if not request.user.is_authenticated:
         return django.http.HttpResponseRedirect('/login/')
 
-    # Require approver credentials, unless downloading as a client
-    if not client and not Profile.objects.get(user=request.user).approver:
-        return django.http.HttpResponseRedirect('/index/')
+    profile = Profile.objects.filter(user=request.user).first()
+
+    if action.upper() == 'DOWNLOAD':
+        if not client and not (profile and profile.enabled):
+            return redirect(request, '/networks/', error='Only enabled users may download Networks')
+
+    elif not (profile and profile.approver):
+        return redirect(request, '/networks/', error='Only approvers may modify Networks')
+
+    if action.upper() in ('UPLOAD', 'DEFAULT', 'DELETE') and request.method != 'POST':
+        return redirect(request, '/networks/%s/' % (engine), error='Network actions must be submitted from the page')
 
     # Split out Uploads, since there is no logic to disambiguate the name
     if action.upper() == 'UPLOAD':
@@ -616,6 +651,9 @@ def manage_books(request, name=None, action=None):
         book = { 'source' : 'https://raw.githubusercontent.com/', 'enabled' : True }
         return render(request, 'manage_book.html', { 'book' : book, 'can_manage' : True, 'creating' : True })
 
+    if action and request.method != 'POST':
+        return redirect(request, '/manage/books/', error='Changes must be submitted from the page')
+
     if action and action.upper() == 'CREATE':
         if not can_manage:
             return redirect(request, '/manage/books/', error='You may not create Books')
@@ -670,6 +708,9 @@ def manage_engines(request, name=None, action=None):
             'presets'       : json.dumps(blank_presets, indent=4),
         }
         return render(request, 'manage_engine.html', data)
+
+    if action and request.method != 'POST':
+        return redirect(request, '/manage/engines/', error='Changes must be submitted from the page')
 
     if action and action.upper() == 'CREATE':
         if not can_manage:
@@ -785,6 +826,8 @@ def manage_user_create(request):
         error = 'A password is required'
     elif request.POST.get('password1') != request.POST.get('password2'):
         error = 'Passwords do not match'
+    else:
+        error = password_error(request.POST['password1'], User(username=username, email=form['email']))
 
     if error:
         return render(request, 'manage_user.html', { 'form' : form, 'creating' : True, 'can_manage' : True }, error=error)
@@ -801,6 +844,9 @@ def manage_user_edit(request, profile, is_self):
 
     if request.POST.get('password1') != request.POST.get('password2'):
         return redirect(request, url, error='Passwords do not match')
+
+    if request.POST.get('password1') and (error := password_error(request.POST['password1'], user)):
+        return redirect(request, url, error=error)
 
     user.email = request.POST.get('email', '').strip()
 
@@ -1172,14 +1218,29 @@ def api_network_download(request, engine, identifier, compressed=False):
 
     return api_response({ 'error' : 'Engine not found. Check /api/config/ for a full list' })
 
+def api_profile(request):
+
+    if request.user.is_authenticated:
+        return Profile.objects.filter(user=request.user).first(), True
+
+    user = django.contrib.auth.authenticate(
+        username=request.POST.get('username', ''), password=request.POST.get('password', ''))
+
+    return (Profile.objects.filter(user=user).first() if user else None), False
+
 @csrf_exempt
 def api_network_delete(request, engine, identifier):
 
-    if not api_authenticate(request):
-        return api_response({ 'error' : 'API requires authentication for this server' })
+    if request.method != 'POST':
+        return api_response({ 'error' : 'This endpoint requires a POST request' })
 
-    if not api_authenticate(request, require_enabled=True):
-        return api_response({ 'error' : 'API requires authentication for this endpoint' })
+    profile, from_session = api_profile(request)
+
+    if from_session and CsrfViewMiddleware(lambda r: None).process_view(request, None, (), {}):
+        return api_response({ 'error' : 'CSRF verification failed' })
+
+    if not (profile and profile.enabled and profile.approver):
+        return api_response({ 'error' : 'Only approvers may delete Networks' })
 
     if not (network := OpenBench.utils.network_disambiguate(engine, identifier)):
         return api_response({ 'error' : 'Network %s for Engine %s not found' % (identifier, engine) })

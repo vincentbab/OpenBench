@@ -36,6 +36,8 @@ import django
 django.setup()
 
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from OpenBench.models import Profile
 
 def prompt_password():
@@ -69,6 +71,11 @@ if __name__ == '__main__':
     password = args.password if args.password else prompt_password()
     if not password:
         sys.exit('Password may not be empty')
+
+    try:
+        validate_password(password, User(username=args.username, email=args.email))
+    except ValidationError as error:
+        sys.exit(' '.join(error.messages))
 
     user = User.objects.create_user(args.username, args.email, password)
     Profile.objects.create(user=user, enabled=args.enabled, approver=args.approver)

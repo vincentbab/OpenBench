@@ -32,7 +32,7 @@
                                     <td class="actions">
                                         <a class="btn btn-ghost btn-icon btn-sm" href="/manage/engines/{{ config.name }}/" title="{% if can_manage %}Edit{% else %}View{% endif %}"><i class="fa-solid {% if can_manage %}fa-pen{% else %}fa-eye{% endif %}"></i></a>
                                         {% if can_manage %}
-                                            <a class="btn btn-ghost btn-icon btn-sm btn-danger" href="/manage/engines/{{ config.name }}/delete/" data-confirm="Delete the {{ config.name }} engine forever?" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
+                                            <form method="POST" action="/manage/engines/{{ config.name }}/delete/" data-confirm="Delete the {{ config.name }} engine forever?" style="display: inline;">{% csrf_token %}<button class="btn btn-ghost btn-icon btn-sm btn-danger" type="submit" title="Delete"><i class="fa-solid fa-trash-can"></i></button></form>
                                         {% endif %}
                                     </td>
                                 </tr>

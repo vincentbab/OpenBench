@@ -1,0 +1,28 @@
+{% extends "OpenBench/base.html" %}
+{% load static %}
+
+{% block title %}Account pending · OpenBench{% endblock %}
+
+{% block body %}
+    <div class="auth">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <img src="{% static 'logo.svg' %}?{{ static_version }}" alt="">
+                <div>
+                    <h1>Account pending</h1>
+                    <p>Signed in as {{ user.username }}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body stack" style="gap: 16px;">
+                    <p style="margin: 0;">Your account has not been enabled yet. An administrator must enable it before you can access this OpenBench instance.</p>
+                    <form method="POST" action="/logout/">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-block"><i class="fa-solid fa-right-from-bracket"></i> Log out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

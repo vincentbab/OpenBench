@@ -37,7 +37,7 @@
                                     {% if network.default %}
                                         <i class="fa-solid fa-star" style="color: var(--warn);" title="Default network"></i>
                                     {% else %}
-                                        <form method="GET" action="/networks/{{ network.engine }}/DEFAULT/{{ network.sha256 }}/" style="display: inline;">
+                                        <form method="POST" action="/networks/{{ network.engine }}/DEFAULT/{{ network.sha256 }}/" style="display: inline;">{% csrf_token %}
                                             <button class="btn btn-ghost btn-icon btn-sm" type="submit" title="{% if network.was_default %}Previous default — make default again{% else %}Make default{% endif %}">
                                                 <i class="{% if network.was_default %}fa-solid{% else %}fa-regular{% endif %} fa-star" {% if network.was_default %}style="color: var(--text-muted);"{% endif %}></i>
                                             </button>
@@ -52,7 +52,7 @@
                                 <td class="actions">
                                     <a class="btn btn-ghost btn-icon btn-sm" href="/networks/{{ network.engine }}/EDIT/{{ network.sha256 }}/" title="Edit"><i class="fa-solid fa-pen"></i></a>
                                     {% if not network.default and not network.was_default %}
-                                        <a class="btn btn-ghost btn-icon btn-sm btn-danger" href="/networks/{{ network.engine }}/DELETE/{{ network.sha256 }}/" data-confirm="Delete {{ network.name }} forever?" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
+                                        <form method="POST" action="/networks/{{ network.engine }}/DELETE/{{ network.sha256 }}/" data-confirm="Delete {{ network.name }} forever?" style="display: inline;">{% csrf_token %}<button class="btn btn-ghost btn-icon btn-sm btn-danger" type="submit" title="Delete"><i class="fa-solid fa-trash-can"></i></button></form>
                                     {% else %}
                                         <span class="btn btn-ghost btn-icon btn-sm disabled" title="Unset the default flags before deleting"><i class="fa-solid fa-trash-can"></i></span>
                                     {% endif %}

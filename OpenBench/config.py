@@ -33,9 +33,34 @@ def create_openbench_config():
 
     with open(os.path.join(PROJECT_PATH, 'Config', 'config.json')) as fin:
         config_dict = json.load(fin)
-        verify_general_config(config_dict)
+
+    apply_environment_overrides(config_dict)
+    verify_general_config(config_dict)
 
     return config_dict
+
+def apply_environment_overrides(config_dict):
+
+    for key, default in config_dict.items():
+
+        if (raw := os.environ.get('OPENBENCH_%s' % (key.upper()))) is None:
+            continue
+
+        raw = raw.strip()
+
+        if type(default) == bool:
+            if raw.lower() not in ('1', '0', 'true', 'false', 'yes', 'no', 'on', 'off'):
+                raise ValueError('OPENBENCH_%s must be a boolean, got %r' % (key.upper(), raw))
+            config_dict[key] = raw.lower() in ('1', 'true', 'yes', 'on')
+
+        elif type(default) == int:
+            config_dict[key] = int(raw)
+
+        elif type(default) == str:
+            config_dict[key] = raw
+
+        else:
+            config_dict[key] = json.loads(raw)
 
 def verify_engine_presets(presets):
 
@@ -74,18 +99,18 @@ def verify_engine_presets(presets):
 
 def verify_general_config(conf):
 
-    assert type(conf.get('client_version'  ) == int)
-    assert type(conf.get('client_repo_url' ) == str)
-    assert type(conf.get('client_repo_ref' ) == str)
+    assert type(conf.get('client_version'  )) == int
+    assert type(conf.get('client_repo_url' )) == str
+    assert type(conf.get('client_repo_ref' )) == str
 
-    assert type(conf.get('fastchess_min_version') == str)
-    assert type(conf.get('fastchess_repo_url') == str)
-    assert type(conf.get('fastchess_repo_ref') == str)
+    assert type(conf.get('fastchess_min_version')) == str
+    assert type(conf.get('fastchess_repo_url')) == str
+    assert type(conf.get('fastchess_repo_ref')) == str
 
-    assert type(conf.get('use_cross_approval'         ) == bool)
-    assert type(conf.get('require_login_to_view'      ) == bool)
-    assert type(conf.get('require_manual_registration') == bool)
-    assert type(conf.get('balance_engine_throughputs' ) == bool)
+    assert type(conf.get('use_cross_approval'         )) == bool
+    assert type(conf.get('require_login_to_view'      )) == bool
+    assert type(conf.get('require_manual_registration')) == bool
+    assert type(conf.get('balance_engine_throughputs' )) == bool
 
     # Serving of Networks and PGNs may be handed off to an nginx reverse proxy.
     # The root must match an "internal" nginx location, aliased to Media/. ie:
